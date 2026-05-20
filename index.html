@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Calorie & Macro Tracker Pro</title>
+    <link rel="manifest" href="manifest.json">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@zxing/library@latest"></script>
+    <style>
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .chart-ring { transition: stroke-dasharray 0.8s ease-out, stroke-dashoffset 0.8s ease-out; }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 font-sans antialiased text-slate-900 dark:text-slate-100 transition-colors duration-300">
+    
+    <div id="auth-overlay" class="fixed inset-0 bg-slate-50 dark:bg-slate-950 z-[100] flex flex-col items-center justify-center transition-opacity duration-300">
+        <div class="bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-xl border border-slate-100 dark:border-slate-800 text-center max-w-sm w-full mx-4">
+            <div class="w-16 h-16 bg-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+            </div>
+            <h1 class="text-2xl font-black text-slate-900 dark:text-white mb-2">Macro Tracker</h1>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mb-8 font-medium">Sign in to sync your data across devices.</p>
+            <button id="btn-login" class="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black rounded-xl py-4 active:scale-[0.98] transition-transform shadow-lg flex items-center justify-center gap-3">
+                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+                Sign in with Google
+            </button>
+        </div>
+    </div>
+
+    <div id="quick-add-modal" class="hidden fixed inset-0 bg-slate-900/80 z-[200] flex flex-col items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 w-full max-w-sm rounded-3xl p-6 shadow-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-black dark:text-white">Quick Add</h2>
+                <button onclick="document.getElementById('quick-add-modal').classList.add('hidden')" class="text-slate-400 font-bold p-2 text-xl hover:text-slate-600">✕</button>
+            </div>
+            <div class="space-y-3">
+                <input type="text" id="quick-add-name" placeholder="E.g. Restaurant Meal" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none dark:text-white">
+                <div class="flex gap-2">
+                    <div class="relative w-full">
+                        <label class="absolute -top-2 left-2 bg-white dark:bg-slate-900 px-1 text-[9px] font-bold tracking-wider uppercase text-slate-400">Calories</label>
+                        <input type="number" id="quick-add-cal" placeholder="0" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm font-bold focus:outline-none text-center dark:text-white">
+                    </div>
+                </div>
+                <div class="flex gap-2 mt-2">
+                    <div class="relative w-full">
+                        <label class="absolute -top-2 left-2 bg-white dark:bg-slate-900 px-1 text-[9px] font-bold tracking-wider uppercase text-red-400">Pro (g)</label>
+                        <input type="number" id="quick-add-p" placeholder="0" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm font-bold focus:outline-none text-center dark:text-white">
+                    </div>
+                    <div class="relative w-full">
+                        <label class="absolute -top-2 left-2 bg-white dark:bg-slate-900 px-1 text-[9px] font-bold tracking-wider uppercase text-blue-400">Carb (g)</label>
+                        <input type="number" id="quick-add-c" placeholder="0" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm font-bold focus:outline-none text-center dark:text-white">
+                    </div>
+                    <div class="relative w-full">
+                        <label class="absolute -top-2 left-2 bg-white dark:bg-slate-900 px-1 text-[9px] font-bold tracking-wider uppercase text-yellow-500">Fat (g)</label>
+                        <input type="number" id="quick-add-f" placeholder="0" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm font-bold focus:outline-none text-center dark:text-white">
+                    </div>
+                </div>
+                <button id="btn-submit-quick-add" class="w-full bg-emerald-500 text-white font-black rounded-xl py-3 mt-4 active:scale-[0.98] transition-transform">Add to Diary</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="smart-scanner-modal" class="hidden fixed inset-0 bg-slate-900/80 z-[200] flex flex-col items-center justify-end md:justify-center p-4 pb-12">
+        <div class="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl p-6 shadow-2xl">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-lg font-black dark:text-white">Smart Scanner</h2>
+                <button onclick="document.getElementById('smart-scanner-modal').classList.add('hidden')" class="text-slate-400 font-bold p-2 text-xl hover:text-slate-600">✕</button>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Gemini API Key (For Label OCR)</label>
+                    <input type="password" id="api-key-input" placeholder="AIzaSy..." class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs focus:outline-none dark:text-white mt-1">
+                    <p class="text-[9px] text-slate-400 mt-1">Stored locally in your browser. <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-blue-500 underline">Get a free key</a></p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 mt-4">
+                    <label class="bg-blue-500 text-white font-bold rounded-xl py-4 text-center cursor-pointer active:scale-95 transition-transform flex flex-col items-center justify-center shadow-md">
+                        <span class="text-xs uppercase tracking-wider mb-1">Barcode</span>
+                        <span class="text-2xl">📊</span>
+                        <input type="file" accept="image/*" capture="environment" class="hidden" onchange="processBarcode(this)">
+                    </label>
+                    
+                    <label class="bg-indigo-500 text-white font-bold rounded-xl py-4 text-center cursor-pointer active:scale-95 transition-transform flex flex-col items-center justify-center shadow-md">
+                        <span class="text-xs uppercase tracking-wider mb-1">Nutr. Label</span>
+                        <span class="text-2xl">📸</span>
+                        <input type="file" accept="image/*" capture="environment" class="hidden" onchange="processLabelOCR(this)">
+                    </label>
+                </div>
+
+                <div id="scanner-status" class="text-center text-xs font-bold text-slate-500 hidden mt-4 animate-pulse">Processing Image...</div>
+            </div>
+        </div>
+    </div>
+
+
+    <div id="main-app" class="hidden">
+        <div class="max-w-md mx-auto min-h-screen relative pb-28">
+            
+            <div id="view-home" class="app-view p-4 pt-6 block">
+                <div class="flex justify-between items-center mb-6 px-1">
+                    <div>
+                        <h1 class="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight">Today</h1>
+                        <div class="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest" id="display-date"></div>
+                    </div>
+                </div>
+
+                <div id="home-charts" class="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 p-6 mb-4">
+                    <div class="flex items-center justify-between gap-4 mb-6">
+                        <div class="flex-1">
+                            <h2 class="text-slate-400 dark:text-slate-500 uppercase tracking-widest text-[10px] font-bold mb-1">Calories Remaining</h2>
+                            <div class="text-4xl font-black tracking-tight text-slate-900 dark:text-white mb-1" id="val-cal-remaining">0</div>
+                            <div class="text-xs font-medium text-slate-500 dark:text-slate-400">
+                                Goal: <span id="val-cal-goal" class="font-bold text-slate-700 dark:text-slate-300">0</span>
+                            </div>
+                        </div>
+
+                        <div class="relative w-24 h-24 shrink-0">
+                            <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                                <circle cx="50" cy="50" r="40" fill="transparent" stroke="currentColor" stroke-width="12" class="text-slate-100 dark:text-slate-800" />
+                                <circle id="chart-f" cx="50" cy="50" r="40" fill="transparent" stroke="#eab308" stroke-width="12" stroke-linecap="round" class="chart-ring" stroke-dasharray="0 251.2" stroke-dashoffset="0" />
+                                <circle id="chart-c" cx="50" cy="50" r="40" fill="transparent" stroke="#3b82f6" stroke-width="12" stroke-linecap="round" class="chart-ring" stroke-dasharray="0 251.2" stroke-dashoffset="0" />
+                                <circle id="chart-p" cx="50" cy="50" r="40" fill="transparent" stroke="#ef4444" stroke-width="12" stroke-linecap="round" class="chart-ring" stroke-dasharray="0 251.2" stroke-dashoffset="0" />
+                            </svg>
+                            <div class="absolute inset-0 flex flex-col items-center justify-center">
+                                <span class="text-base font-black text-slate-800 dark:text-white leading-none mt-1" id="val-cal-eaten">0</span>
+                                <span class="text-[8px] uppercase font-bold text-slate-400">Eaten</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-2 text-center pt-4 border-t border-slate-100 dark:border-slate-800">
+                        <div class="flex flex-col items-center">
+                            <div class="relative w-12 h-12 mb-1">
+                                <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                                    <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="currentColor" stroke-width="4" class="text-slate-100 dark:text-slate-800" />
+                                    <circle id="mini-p" cx="18" cy="18" r="15.915" fill="transparent" stroke="#ef4444" stroke-width="4" stroke-dasharray="0 100" stroke-linecap="round" class="chart-ring" />
+                                    <circle id="mini-p-excess" cx="18" cy="18" r="15.915" fill="transparent" stroke="#9333ea" stroke-width="4" stroke-dasharray="0 100" stroke-linecap="round" class="chart-ring" />
+                                </svg>
+                                <div class="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-slate-800 dark:text-white transition-colors" id="val-p">0</div>
+                            </div>
+                            <div class="text-[9px] font-bold text-red-500 uppercase tracking-widest">Protein</div>
+                            <div class="text-[9px] text-slate-400 font-medium"><span id="target-p">0</span>g target</div>
+                        </div>
+                        <div class="flex flex-col items-center">
+                            <div class="relative w-12 h-12 mb-1">
+                                <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                                    <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="currentColor" stroke-width="4" class="text-slate-100 dark:text-slate-800" />
+                                    <circle id="mini-c" cx="18" cy="18" r="15.915" fill="transparent" stroke="#3b82f6" stroke-width="4" stroke-dasharray="0 100" stroke-linecap="round" class="chart-ring" />
+                                    <circle id="mini-c-excess" cx="18" cy="18" r="15.915" fill="transparent" stroke="#ef4444" stroke-width="4" stroke-dasharray="0 100" stroke-linecap="round" class="chart-ring" />
+                                </svg>
+                                <div class="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-slate-800 dark:text-white transition-colors" id="val-c">0</div>
+                            </div>
+                            <div class="text-[9px] font-bold text-blue-500 uppercase tracking-widest">Carbs</div>
+                            <div class="text-[9px] text-slate-400 font-medium"><span id="target-c">0</span>g target</div>
+                        </div>
+                        <div class="flex flex-col items-center">
+                            <div class="relative w-12 h-12 mb-1">
+                                <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                                    <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="currentColor" stroke-width="4" class="text-slate-100 dark:text-slate-800" />
+                                    <circle id="mini-f" cx="18" cy="18" r="15.915" fill="transparent" stroke="#eab308" stroke-width="4" stroke-dasharray="0 100" stroke-linecap="round" class="chart-ring" />
+                                    <circle id="mini-f-excess" cx="18" cy="18" r="15.915" fill="transparent" stroke="#ef4444" stroke-width="4" stroke-dasharray="0 100" stroke-linecap="round" class="chart-ring" />
+                                </svg>
+                                <div class="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-slate-800 dark:text-white transition-colors" id="val-f">0</div>
+                            </div>
+                            <div class="text-[9px] font-bold text-yellow-500 uppercase tracking-widest">Fats</div>
+                            <div class="text-[9px] text-slate-400 font-medium"><span id="target-f">0</span>g target</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-4 mb-4">
+                    <div class="flex justify-between items-center mb-3">
+                        <h2 class="text-slate-500 dark:text-slate-400 uppercase tracking-widest text-[10px] font-bold">Log Food</h2>
+                        <div class="flex gap-2">
+                            <button onclick="document.getElementById('quick-add-modal').classList.remove('hidden')" class="text-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 active:scale-95 transition-transform border border-emerald-100 dark:border-emerald-800">
+                                ⚡ Quick Add
+                            </button>
+                            <button onclick="document.getElementById('smart-scanner-modal').classList.remove('hidden')" class="text-blue-500 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 active:scale-95 transition-transform border border-blue-100 dark:border-blue-800">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg> Scan
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <div class="flex gap-2">
+                            <input type="time" id="home-log-time" class="w-1/3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2 py-3 text-xs font-semibold focus:outline-none dark:text-white text-center">
+                            
+                            <input list="food-database-list" id="home-db-search" placeholder="Search database..." class="w-2/3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-3 text-sm font-medium focus:outline-none dark:text-white">
+                            <datalist id="food-database-list"></datalist>
+                        </div>
+                        <div class="flex gap-2">
+                            <div class="relative flex-1">
+                                <label class="absolute top-1/2 right-3 -translate-y-1/2 text-xs font-bold text-slate-400">g</label>
+                                <input type="number" id="home-db-grams" placeholder="Weighed Amount" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-4 pr-8 py-3 text-sm font-semibold focus:outline-none dark:text-white">
+                            </div>
+                            <button id="btn-home-log" class="w-1/4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black rounded-xl px-2 active:scale-[0.95] transition-transform shadow-sm">Add</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-5 mb-4">
+                    <h2 class="text-slate-500 dark:text-slate-400 uppercase tracking-widest text-[10px] font-bold mb-4">Food Diary</h2>
+                    <div id="diary-container" class="space-y-3"></div>
+                </div>
+            </div>
+
+            <div id="view-database" class="app-view p-4 pt-6 hidden">
+                <h1 class="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight mb-6">Food Database</h1>
+                <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-5 mb-6">
+                    <h2 class="text-slate-800 dark:text-white font-bold mb-1">Create New Food</h2>
+                    <div class="space-y-3">
+                        <input type="text" id="new-db-name" placeholder="Food Name" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none dark:text-white">
+                        <div class="flex gap-2">
+                            <div class="relative w-1/2">
+                                <label class="absolute -top-2 left-2 bg-white dark:bg-slate-900 px-1 text-[9px] font-bold tracking-wider uppercase text-slate-400">Serving (g)</label>
+                                <input type="number" id="new-db-serving" placeholder="100" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm font-bold focus:outline-none text-center dark:text-white">
+                            </div>
+                            <div class="relative w-1/2">
+                                <label class="absolute -top-2 left-2 bg-white dark:bg-slate-900 px-1 text-[9px] font-bold tracking-wider uppercase text-slate-400">Calories</label>
+                                <input type="number" id="new-db-cal" placeholder="0" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm font-bold focus:outline-none text-center dark:text-white">
+                            </div>
+                        </div>
+                        <div class="flex gap-2 mt-2">
+                            <div class="relative w-full">
+                                <label class="absolute -top-2 left-2 bg-white dark:bg-slate-900 px-1 text-[9px] font-bold tracking-wider uppercase text-red-400">Pro</label>
+                                <input type="number" id="new-db-p" placeholder="0" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm font-bold focus:outline-none text-center dark:text-white">
+                            </div>
+                            <div class="relative w-full">
+                                <label class="absolute -top-2 left-2 bg-white dark:bg-slate-900 px-1 text-[9px] font-bold tracking-wider uppercase text-blue-400">Carb</label>
+                                <input type="number" id="new-db-c" placeholder="0" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm font-bold focus:outline-none text-center dark:text-white">
+                            </div>
+                            <div class="relative w-full">
+                                <label class="absolute -top-2 left-2 bg-white dark:bg-slate-900 px-1 text-[9px] font-bold tracking-wider uppercase text-yellow-500">Fat</label>
+                                <input type="number" id="new-db-f" placeholder="0" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm font-bold focus:outline-none text-center dark:text-white">
+                            </div>
+                        </div>
+                        <button id="btn-save-db" class="w-full bg-blue-500 text-white font-bold rounded-xl py-3 mt-2 active:scale-[0.98] transition-transform">Save to Database</button>
+                    </div>
+                </div>
+                <h2 class="text-slate-500 dark:text-slate-400 uppercase tracking-widest text-[10px] font-bold mb-3 pl-1">Your Foods</h2>
+                <div id="db-list-container" class="space-y-2"></div>
+            </div>
+
+            <div id="view-weight" class="app-view p-4 pt-6 hidden">
+                <h1 class="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight mb-6">Weight Log</h1>
+                
+                <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-5 mb-4">
+                    <div class="flex gap-2 mb-2">
+                        <input type="date" id="weight-date" class="w-1/2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2 py-3 text-xs font-semibold focus:outline-none dark:text-white">
+                        <input type="time" id="weight-time" class="w-1/2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2 py-3 text-xs font-semibold focus:outline-none dark:text-white text-center">
+                    </div>
+                    <div class="flex gap-2">
+                        <input type="number" step="0.1" id="input-weight" placeholder="0.0 lbs" class="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2 py-3 text-base font-black focus:outline-none dark:text-white text-center">
+                        <button id="btn-log-weight" class="w-1/3 bg-emerald-500 text-white font-bold rounded-xl px-2 active:scale-[0.95] transition-transform">Log</button>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-5 mb-6">
+                    <h2 class="text-slate-500 dark:text-slate-400 uppercase tracking-widest text-[10px] font-bold mb-4">Trend (Last 14 Logs)</h2>
+                    <div id="weight-chart-container" class="w-full h-32"></div>
+                </div>
+                
+                <div class="flex justify-between items-end mb-3 pl-1">
+                    <h2 class="text-slate-500 dark:text-slate-400 uppercase tracking-widest text-[10px] font-bold">History</h2>
+                    <select id="weight-view-type" class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-xs font-bold dark:text-white">
+                        <option value="all">All Logs (Raw)</option>
+                        <option value="daily">Daily Avg</option>
+                        <option value="weekly">Weekly Avg</option>
+                        <option value="monthly">Monthly Avg</option>
+                    </select>
+                </div>
+                <div id="weight-history-container" class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-2"></div>
+            </div>
+
+            <div id="view-history" class="app-view p-4 pt-6 hidden">
+                <h1 class="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight mb-6">Long-Term History</h1>
+                <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-4 mb-4 flex items-center justify-between gap-3">
+                    <label class="text-[10px] font-bold uppercase tracking-widest text-slate-500 whitespace-nowrap">View Date:</label>
+                    <input type="date" id="history-date-picker" class="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm font-semibold focus:outline-none dark:text-white">
+                </div>
+                <div id="history-lookup-result" class="mb-6 hidden"></div>
+
+                <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-5 mb-4">
+                    <h2 class="text-slate-500 dark:text-slate-400 uppercase tracking-widest text-[10px] font-bold mb-4">Caloric Intake (Last 7 Days)</h2>
+                    <div id="history-chart-container" class="w-full h-32"></div>
+                </div>
+
+                <div class="flex justify-between items-end mb-3 pl-1">
+                    <h2 class="text-slate-500 dark:text-slate-400 uppercase tracking-widest text-[10px] font-bold">Recent Logs</h2>
+                    <select id="history-view-type" class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-xs font-bold dark:text-white">
+                        <option value="daily">Daily</option>
+                        <option value="weekly">Weekly Avg</option>
+                        <option value="monthly">Monthly Avg</option>
+                    </select>
+                </div>
+                <div id="long-history-container" class="space-y-3"></div>
+            </div>
+
+            <div id="view-goals" class="app-view p-4 pt-6 hidden">
+                <h1 class="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight mb-6">Goals & Macros</h1>
+                
+                <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-5 mb-4">
+                    <h2 class="text-slate-500 dark:text-slate-400 uppercase tracking-widest text-[10px] font-bold mb-4">Expenditure & Target</h2>
+                    <div class="space-y-4">
+                        <div class="flex gap-3">
+                            <div class="w-1/2">
+                                <label class="block text-[10px] font-bold text-slate-500 mb-1">Goal Weight (lbs)</label>
+                                <input type="number" id="goal-weight" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm font-bold dark:text-white text-center">
+                            </div>
+                            <div class="w-1/2">
+                                <label class="block text-[10px] font-bold text-slate-500 mb-1">Weekly Pace</label>
+                                <select id="goal-rate" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2 py-2 text-sm font-bold dark:text-white truncate">
+                                    <option value="-2">Lose 2 lbs</option>
+                                    <option value="-1.5">Lose 1.5 lbs</option>
+                                    <option value="-1">Lose 1 lb</option>
+                                    <option value="-0.5">Lose 0.5 lbs</option>
+                                    <option value="0">Maintain</option>
+                                    <option value="0.5">Gain 0.5 lbs</option>
+                                    <option value="1">Gain 1 lb</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 mb-1">Estimated TDEE (kcal)</label>
+                            <div class="flex gap-2">
+                                <input type="number" id="goal-tdee" class="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm font-bold dark:text-white text-center" placeholder="e.g. 2500">
+                                <button id="btn-calc-tdee" class="bg-blue-500 text-white font-bold rounded-xl px-4 text-xs active:scale-95 transition-transform">Apply TDEE</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-5">
+                    <h2 class="text-slate-500 dark:text-slate-400 uppercase tracking-widest text-[10px] font-bold mb-4 text-center">Lock & Fill Engine</h2>
+                    
+                    <div class="flex justify-center mb-6">
+                        <div class="relative w-32 h-32">
+                            <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                                <circle cx="50" cy="50" r="40" fill="transparent" stroke="currentColor" stroke-width="12" class="text-slate-100 dark:text-slate-800" />
+                                <circle id="goal-chart-f" cx="50" cy="50" r="40" fill="transparent" stroke="#eab308" stroke-width="12" stroke-linecap="round" class="chart-ring" stroke-dasharray="0 251.2" />
+                                <circle id="goal-chart-c" cx="50" cy="50" r="40" fill="transparent" stroke="#3b82f6" stroke-width="12" stroke-linecap="round" class="chart-ring" stroke-dasharray="0 251.2" />
+                                <circle id="goal-chart-p" cx="50" cy="50" r="40" fill="transparent" stroke="#ef4444" stroke-width="12" stroke-linecap="round" class="chart-ring" stroke-dasharray="0 251.2" />
+                            </svg>
+                            <div class="absolute inset-0 flex flex-col items-center justify-center">
+                                <span class="text-[9px] uppercase font-bold text-slate-400">Total Split</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-5 flex items-end gap-2">
+                        <div class="flex-1">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 pl-2">Total Target Calories</label>
+                            <input type="number" id="goal-engine-cal" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-2xl font-black focus:outline-none dark:text-white transition-colors">
+                        </div>
+                        <button id="btn-lock-cal" class="bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-slate-800 dark:hover:text-white p-3 rounded-xl border border-slate-200 dark:border-slate-700 transition-colors h-full flex items-center justify-center">
+                            <svg id="icon-unlock" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"></path></svg>
+                            <svg id="icon-lock" class="w-6 h-6 hidden text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" /></svg>
+                        </button>
+                    </div>
+                    
+                    <div class="space-y-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+                        <div class="flex items-center gap-2">
+                            <label class="w-16 text-[10px] font-bold text-red-500 uppercase tracking-widest">Protein</label>
+                            <div class="relative flex-1">
+                                <label class="absolute top-1/2 right-3 -translate-y-1/2 text-xs font-bold text-slate-400">g</label>
+                                <input type="number" id="goal-engine-p" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-3 pr-8 py-2 text-sm font-bold dark:text-white focus:outline-none focus:ring-1 focus:ring-red-500">
+                            </div>
+                            <span id="pct-p" class="w-12 text-xs font-bold text-slate-400 text-right">0%</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <label class="w-16 text-[10px] font-bold text-blue-500 uppercase tracking-widest">Carbs</label>
+                            <div class="relative flex-1">
+                                <label class="absolute top-1/2 right-3 -translate-y-1/2 text-xs font-bold text-slate-400">g</label>
+                                <input type="number" id="goal-engine-c" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-3 pr-8 py-2 text-sm font-bold dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500">
+                            </div>
+                            <span id="pct-c" class="w-12 text-xs font-bold text-slate-400 text-right">0%</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <label class="w-16 text-[10px] font-bold text-yellow-500 uppercase tracking-widest">Fats</label>
+                            <div class="relative flex-1">
+                                <label class="absolute top-1/2 right-3 -translate-y-1/2 text-xs font-bold text-slate-400">g</label>
+                                <input type="number" id="goal-engine-f" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-3 pr-8 py-2 text-sm font-bold dark:text-white focus:outline-none focus:ring-1 focus:ring-yellow-500">
+                            </div>
+                            <span id="pct-f" class="w-12 text-xs font-bold text-slate-400 text-right">0%</span>
+                        </div>
+                    </div>
+                    
+                    <p id="lock-hint" class="text-[9px] text-slate-400 mt-4 text-center hidden">Calories locked. Modifying one macro flexes another to keep total static.</p>
+
+                    <button id="btn-save-engine" class="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black rounded-xl py-4 mt-6 active:scale-[0.98] transition-transform shadow-lg">
+                        Update Master Goals
+                    </button>
+                </div>
+
+                <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-5 mt-4">
+                    <h2 class="text-slate-500 dark:text-slate-400 uppercase tracking-widest text-[10px] font-bold mb-4 text-center">Data Backup & Sync</h2>
+                    <div class="flex gap-3 mb-3">
+                        <button id="btn-export" class="flex-1 bg-blue-50 dark:bg-slate-800 text-blue-600 dark:text-blue-400 font-bold rounded-xl py-3 text-sm active:scale-[0.98] transition-transform border border-blue-100 dark:border-slate-700">Export File</button>
+                        <button id="btn-import" class="flex-1 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold rounded-xl py-3 text-sm active:scale-[0.98] transition-transform border border-slate-200 dark:border-slate-700">Import File</button>
+                        <input type="file" id="file-import" accept=".json" class="hidden">
+                    </div>
+                    <button id="btn-logout" class="w-full bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-bold rounded-xl py-3 text-sm active:scale-[0.98] transition-transform border border-red-100 dark:border-red-900/30">
+                        Sign Out (<span id="display-user-email"></span>)
+                    </button>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="fixed bottom-0 left-0 w-full bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+            <div class="max-w-md mx-auto flex justify-between items-center px-4 py-1 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+                <button onclick="switchView('home')" class="nav-btn active flex flex-col items-center p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors" data-target="view-home">
+                    <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                    <span class="text-[9px] font-bold tracking-wider uppercase">Home</span>
+                </button>
+                <button onclick="switchView('database')" class="nav-btn flex flex-col items-center p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors" data-target="view-database">
+                    <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path></svg>
+                    <span class="text-[9px] font-bold tracking-wider uppercase">Foods</span>
+                </button>
+                <button onclick="switchView('weight')" class="nav-btn flex flex-col items-center p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors" data-target="view-weight">
+                    <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"></path></svg>
+                    <span class="text-[9px] font-bold tracking-wider uppercase">Weight</span>
+                </button>
+                <button onclick="switchView('history')" class="nav-btn flex flex-col items-center p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors" data-target="view-history">
+                    <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    <span class="text-[9px] font-bold tracking-wider uppercase">History</span>
+                </button>
+                <button onclick="switchView('goals')" class="nav-btn flex flex-col items-center p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors" data-target="view-goals">
+                    <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    <span class="text-[9px] font-bold tracking-wider uppercase">Goals</span>
+                </button>
+            </div>
+        </div>
+    </div> <style>
+        .nav-btn.active { color: #0f172a; }
+        @media (prefers-color-scheme: dark) { .nav-btn.active { color: #ffffff; } }
+    </style>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        // ==========================================
+        const firebaseConfig = {
+          apiKey: "AIzaSyDFghUuWeunz4lPrL-PKYH7pVVPXNt65A0",
+          authDomain: "cal-tracker-70796.firebaseapp.com",
+          projectId: "cal-tracker-70796",
+          storageBucket: "cal-tracker-70796.firebasestorage.app",
+          messagingSenderId: "946536046238",
+          appId: "1:946536046238:web:c0e944c7f8a830bea6e58f",
+          measurementId: "G-EKJ3KQ8SV0"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const provider = new GoogleAuthProvider();
+
+        let currentUser = null;
+
+        const DEFAULT_FOOD_DB = [
+            { id: 1, name: "ON Protein Powder", serving: 100, cal: 380, p: 77, c: 9, f: 3 },
+            { id: 2, name: "2% Greek Yogurt", serving: 100, cal: 73, p: 10, c: 3, f: 2 },
+            { id: 3, name: "Mixed Berries", serving: 100, cal: 50, p: 1, c: 12, f: 0.5 },
+            { id: 4, name: "Chicken Breast (Raw)", serving: 100, cal: 110, p: 23, c: 0, f: 1.2 },
+            { id: 5, name: "93% Ground Beef (Raw)", serving: 100, cal: 150, p: 21, c: 0, f: 7 },
+            { id: 6, name: "Sweet Potatoes (Raw)", serving: 100, cal: 86, p: 1.6, c: 20, f: 0.1 },
+            { id: 7, name: "Eggs (Raw, Whole)", serving: 100, cal: 143, p: 12.6, c: 0.7, f: 9.5 },
+            { id: 8, name: "Jasmine Rice (Dry)", serving: 100, cal: 360, p: 7, c: 80, f: 1 },
+            { id: 9, name: "Avocado Oil", serving: 100, cal: 884, p: 0, c: 0, f: 100 }
+        ];
+
+        let appState = {
+            lastActiveDate: "", 
+            targets: { cal: 2000, p: 150, c: 200, f: 67 },
+            settings: { goalWeight: '', rate: '-1', tdee: '', isCalLocked: false },
+            totals: { cal: 0, p: 0, c: 0, f: 0 },
+            diary: [], history: [], foodDatabase: [], weightLog: [] 
+        };
+
+        const STORAGE_KEY = 'macroTrackerPro_Data_v3';
+
+        // --- AUTH LOGIC ---
+        const authOverlay = document.getElementById('auth-overlay');
+        const mainApp = document.getElementById('main-app');
+
+        document.getElementById('btn-login').addEventListener('click', async () => {
+            try { await signInWithPopup(auth, provider); } 
+            catch (error) { alert("Login failed: " + error.message); }
+        });
+
+        document.getElementById('btn-logout').addEventListener('click', () => {
+            signOut(auth);
+        });
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                currentUser = user;
+                authOverlay.classList.add('opacity-0', 'pointer-events-none');
+                setTimeout(() => authOverlay.classList.add('hidden'), 300);
+                mainApp.classList.remove('hidden');
+                document.getElementById('display-user-email').textContent = user.email;
+                await loadState();
+                renderHome();
+            } else {
+                currentUser = null;
+                authOverlay.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
+                mainApp.classList.add('hidden');
+            }
+        });
+
+        // --- DATA SYNC LOGIC ---
+        async function saveState() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+            if (currentUser) {
+                try { await setDoc(doc(db, "users", currentUser.uid), appState); } 
+                catch (e) { console.error("Cloud Sync Error:", e); }
+            }
+        }
+
+        window.saveState = saveState;
+
+        async function loadState() {
+            if (!currentUser) return;
+            try {
+                const docRef = doc(db, "users", currentUser.uid);
+                const docSnap = await getDoc(docRef);
+                
+                if (docSnap.exists()) {
+                    const parsedData = docSnap.data();
+                    appState = {
+                        ...parsedData,
+                        targets: parsedData.targets || { cal: 2000, p: 150, c: 200, f: 67 },
+                        settings: parsedData.settings || { goalWeight: '', rate: '-1', tdee: '', isCalLocked: false },
+                        history: parsedData.history || [], weightLog: parsedData.weightLog || [],
+                        foodDatabase: parsedData.foodDatabase || [...DEFAULT_FOOD_DB]
+                    };
+                } else {
+                    const localData = localStorage.getItem(STORAGE_KEY);
+                    if (localData) {
+                        appState = JSON.parse(localData);
+                        await saveState(); 
+                    } else {
+                        appState.foodDatabase = [...DEFAULT_FOOD_DB];
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to load from cloud, falling back to local.", e);
+                const localData = localStorage.getItem(STORAGE_KEY);
+                if (localData) appState = JSON.parse(localData);
+            }
+
+            const todayStr = getFormattedDateString();
+            document.getElementById('display-date').textContent = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+            document.getElementById('weight-date').value = todayStr;
+            const now = new Date();
+            document.getElementById('weight-time').value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+            document.getElementById('history-date-picker').value = todayStr;
+
+            if (!appState.lastActiveDate) {
+                appState.lastActiveDate = todayStr; saveState();
+            } else if (appState.lastActiveDate !== todayStr) {
+                const alreadyArchived = appState.history.find(h => h.date === appState.lastActiveDate);
+                if (!alreadyArchived) {
+                    appState.history.push({ date: appState.lastActiveDate, totals: { ...appState.totals }, diary: [...appState.diary] });
+                }
+                appState.totals = { cal: 0, p: 0, c: 0, f: 0 }; appState.diary = []; appState.lastActiveDate = todayStr; saveState();
+            }
+        }
+
+        // ==========================================
+        // SMART SCANNER & OCR LOGIC
+        // ==========================================
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = error => reject(error);
+            });
+        }
+
+        window.processBarcode = async function(input) {
+            const file = input.files[0];
+            if (!file) return;
+            
+            document.getElementById('scanner-status').classList.remove('hidden');
+            document.getElementById('scanner-status').textContent = "Looking for barcode...";
+
+            try {
+                const codeReader = new ZXing.BrowserMultiFormatReader();
+                const imgUrl = URL.createObjectURL(file);
+                const result = await codeReader.decodeFromImageUrl(imgUrl);
+                const barcode = result.text;
+
+                document.getElementById('scanner-status').textContent = "Fetching nutrition data...";
+                
+                const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
+                const data = await res.json();
+
+                if (data.status === 1) {
+                    const nut = data.product.nutriments;
+                    window.populateNewFoodForm(
+                        data.product.product_name || "Scanned Food",
+                        100, 
+                        nut['energy-kcal_100g'] || 0,
+                        nut.proteins_100g || 0,
+                        nut.carbohydrates_100g || 0,
+                        nut.fat_100g || 0
+                    );
+                    alert("Food found and added to entry form!");
+                } else {
+                    alert("Barcode not found in OpenFoodFacts database.");
+                }
+            } catch (err) {
+                alert("Could not read a barcode. Try taking a clearer photo.");
+            } finally {
+                document.getElementById('scanner-status').classList.add('hidden');
+                document.getElementById('smart-scanner-modal').classList.add('hidden');
+                input.value = ''; 
+            }
+        }
+
+        window.processLabelOCR = async function(input) {
+            const apiKey = document.getElementById('api-key-input').value || localStorage.getItem('gemini_api_key');
+            if (!apiKey) return alert("Please enter your Gemini API Key first.");
+            
+            localStorage.setItem('gemini_api_key', apiKey);
+            document.getElementById('api-key-input').value = apiKey;
+
+            const file = input.files[0];
+            if (!file) return;
+
+            document.getElementById('scanner-status').classList.remove('hidden');
+            document.getElementById('scanner-status').textContent = "AI Reading Label...";
+
+            try {
+                const base64Data = await fileToBase64(file);
+                
+                const payload = {
+                    contents: [{
+                        parts: [
+                            { text: "Extract the nutrition facts. Return ONLY a raw JSON object (no markdown formatting, no backticks). Keys must be exactly: name, serving_g, cal, pro, carb, fat. If the food name is missing, use 'Scanned Label'. Ensure macros are numbers." },
+                            { inline_data: { mime_type: file.type, data: base64Data } }
+                        ]
+                    }]
+                };
+
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await res.json();
+                
+                if (data.error) throw new Error(data.error.message);
+
+                let rawJson = data.candidates[0].content.parts[0].text;
+                rawJson = rawJson.replace(/```json/g, '').replace(/```/g, '').trim();
+                
+                const nutrition = JSON.parse(rawJson);
+                window.populateNewFoodForm(nutrition.name, nutrition.serving_g, nutrition.cal, nutrition.pro, nutrition.carb, nutrition.fat);
+                alert("Label successfully read!");
+
+            } catch (err) {
+                console.error(err);
+                alert("AI failed to read the label. Make sure the image is clear. Error: " + err.message);
+            } finally {
+                document.getElementById('scanner-status').classList.add('hidden');
+                document.getElementById('smart-scanner-modal').classList.add('hidden');
+                input.value = ''; 
+            }
+        }
+
+        window.populateNewFoodForm = function(name, serving, cal, p, c, f) {
+            window.switchView('database');
+            document.getElementById('new-db-name').value = name;
+            document.getElementById('new-db-serving').value = Math.round(serving);
+            document.getElementById('new-db-cal').value = Math.round(cal);
+            document.getElementById('new-db-p').value = Math.round(p);
+            document.getElementById('new-db-c').value = Math.round(c);
+            document.getElementById('new-db-f').value = Math.round(f);
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedKey = localStorage.getItem('gemini_api_key');
+            if (savedKey) document.getElementById('api-key-input').value = savedKey;
+        });
+
+        // ==========================================
+        // UI AND RENDER LOGIC
+        // ==========================================
+        function getFormattedDateString() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+        function formatTime12(time24) { if(!time24) return ""; let [h, m] = time24.split(':'); h = parseInt(h); const ampm = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12; return `${h}:${m.padStart(2, '0')} ${ampm}`; }
+        function getWeekStartString(dateStr) { const d = new Date(dateStr + 'T12:00:00'); const day = d.getDay(); const diff = d.getDate() - day + (day === 0 ? -6 : 1); const mon = new Date(d.setDate(diff)); return `${mon.getFullYear()}-${String(mon.getMonth() + 1).padStart(2, '0')}-${String(mon.getDate()).padStart(2, '0')}`; }
+
+        function groupData(dataArray, groupingType, valueKey) {
+            const groups = {};
+            dataArray.forEach(item => {
+                let key = item.date; let displayKey = item.date;
+                if (groupingType === 'weekly') { key = getWeekStartString(item.date); displayKey = `Week of ${key}`; } 
+                else if (groupingType === 'monthly') { key = item.date.substring(0, 7); displayKey = key; }
+
+                if (!groups[key]) {
+                    groups[key] = { display: displayKey, sum: 0, count: 0 };
+                    if (valueKey === 'totals') { groups[key].p = 0; groups[key].c = 0; groups[key].f = 0; }
+                }
+                
+                if (valueKey === 'weight') { groups[key].sum += item.weight; } 
+                else if (valueKey === 'totals') {
+                    groups[key].sum += item.totals.cal; groups[key].p += item.totals.p;
+                    groups[key].c += item.totals.c; groups[key].f += item.totals.f;
+                }
+                groups[key].count++;
+            });
+
+            return Object.values(groups).map(g => {
+                const result = { display: g.display, avg: Math.round((g.sum / g.count)*10)/10 };
+                if (valueKey === 'totals') {
+                    result.p = Math.round(g.p / g.count); result.c = Math.round(g.c / g.count); result.f = Math.round(g.f / g.count);
+                }
+                return result;
+            }).reverse();
+        }
+
+        window.switchView = function(viewId) {
+            document.querySelectorAll('.app-view').forEach(el => { el.classList.add('hidden'); el.classList.remove('block'); });
+            document.getElementById('view-' + viewId).classList.remove('hidden'); document.getElementById('view-' + viewId).classList.add('block');
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`.nav-btn[data-target="view-${viewId}"]`).classList.add('active');
+
+            if(viewId === 'home') renderHome();
+            if(viewId === 'database') renderDatabase();
+            if(viewId === 'weight') renderWeight();
+            if(viewId === 'history') renderHistory();
+            if(viewId === 'goals') renderGoalsForm();
+        }
+
+        function updateDonutChart() {
+            const p = appState.totals.p; const c = appState.totals.c; const f = appState.totals.f;
+            const calGoal = appState.targets.cal || 1; const circumference = 251.2; 
+            
+            const pCircle = document.getElementById('chart-p'); const cCircle = document.getElementById('chart-c'); const fCircle = document.getElementById('chart-f');
+            const pCal = p * 4; const cCal = c * 4; const fCal = f * 9;
+            const pLength = (pCal / calGoal) * circumference; const cLength = (cCal / calGoal) * circumference; const fLength = (fCal / calGoal) * circumference;
+
+            fCircle.style.strokeDasharray = `${fLength} ${circumference}`; fCircle.style.strokeDashoffset = 0; 
+            cCircle.style.strokeDasharray = `${cLength} ${circumference}`; cCircle.style.strokeDashoffset = -fLength;
+            pCircle.style.strokeDasharray = `${pLength} ${circumference}`; pCircle.style.strokeDashoffset = -(fLength + cLength);
+
+            function styleMiniDonut(macro, eaten, target, baseColor) {
+                const pct = (eaten / target) * 100 || 0;
+                const base = document.getElementById(`mini-${macro}`); const excess = document.getElementById(`mini-${macro}-excess`); const valTxt = document.getElementById(`val-${macro}`);
+                if (pct <= 100) {
+                    base.style.strokeDasharray = `${pct} 100`; base.style.stroke = baseColor; excess.style.strokeDasharray = `0 100`;
+                    valTxt.classList.remove('text-red-500'); valTxt.classList.add('text-slate-800', 'dark:text-white');
+                } else {
+                    base.style.strokeDasharray = `100 100`; base.style.stroke = baseColor; excess.style.strokeDasharray = `${Math.min(pct - 100, 100)} 100`; 
+                    excess.style.stroke = (macro === 'p') ? '#9333ea' : '#ef4444'; valTxt.classList.remove('text-slate-800', 'dark:text-white'); valTxt.classList.add('text-red-500');
+                }
+            }
+            styleMiniDonut('p', p, appState.targets.p, '#ef4444'); styleMiniDonut('c', c, appState.targets.c, '#3b82f6'); styleMiniDonut('f', f, appState.targets.f, '#eab308');
+        }
+
+        function drawWeightChart() {
+            const container = document.getElementById('weight-chart-container');
+            if(appState.weightLog.length < 2) { container.innerHTML = '<div class="h-full flex items-center justify-center text-xs text-slate-400 italic">Log at least 2 weights to see trend.</div>'; return; }
+            const data = [...appState.weightLog].sort((a,b) => new Date(a.date) - new Date(b.date)).slice(-14);
+            const maxW = Math.max(...data.map(d=>d.weight)); const minW = Math.min(...data.map(d=>d.weight)); const range = (maxW - minW) || 1; 
+            const width = 300; const height = 100; const padding = 10;
+            
+            let points = data.map((d, i) => { const x = padding + (i / (data.length - 1)) * (width - 2 * padding); const y = height - padding - ((d.weight - minW) / range) * (height - 2 * padding); return `${x},${y}`; }).join(' ');
+            container.innerHTML = `<svg viewBox="0 0 ${width} ${height}" class="w-full h-full overflow-visible"><polyline fill="none" stroke="#10b981" stroke-width="3" points="${points}" stroke-linecap="round" stroke-linejoin="round"/>${data.map((d,i) => {
+                const x = padding + (i / (data.length - 1)) * (width - 2 * padding); const y = height - padding - ((d.weight - minW) / range) * (height - 2 * padding);
+                return `<circle cx="${x}" cy="${y}" r="3" fill="#10b981" class="dark:stroke-slate-900 stroke-white stroke-2"/>`;
+            }).join('')}</svg>`;
+        }
+
+        function drawHistoryChart() {
+            const container = document.getElementById('history-chart-container');
+            const data = [...appState.history].sort((a,b) => new Date(a.date) - new Date(b.date)).slice(-7);
+            if(data.length === 0) { container.innerHTML = '<div class="h-full flex items-center justify-center text-xs text-slate-400 italic">No past history to graph.</div>'; return; }
+            const maxC = Math.max(...data.map(d=>d.totals.cal), appState.targets.cal); const width = 300; const height = 100; const padding = 5; const barWidth = ((width - 2*padding) / data.length) - 6;
+            
+            let rects = data.map((d, i) => {
+                const h = (d.totals.cal / maxC) * (height - 2*padding); const x = padding + i * (barWidth + 6); const y = height - padding - h;
+                return `<rect x="${x}" y="${y}" width="${barWidth}" height="${h}" fill="${d.totals.cal > appState.targets.cal ? '#ef4444' : '#3b82f6'}" rx="3"/>`;
+            }).join('');
+            const targetY = height - padding - ((appState.targets.cal / maxC) * (height - 2*padding));
+            const targetLine = `<line x1="0" y1="${targetY}" x2="${width}" y2="${targetY}" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4 4" />`;
+            container.innerHTML = `<svg viewBox="0 0 ${width} ${height}" class="w-full h-full overflow-visible">${rects}${targetLine}</svg>`;
+        }
+
+        function renderHome() {
+            if(!document.getElementById('home-log-time').value) { const now = new Date(); document.getElementById('home-log-time').value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`; }
+
+            const homeChartsEl = document.getElementById('home-charts');
+            let emptyStateEl = document.getElementById('home-empty-state');
+
+            // Handle Empty State / Missing Goals
+            if (!appState.targets.cal || appState.targets.cal === 0) {
+                if (!emptyStateEl) {
+                    const div = document.createElement('div');
+                    div.id = 'home-empty-state';
+                    div.className = 'bg-white dark:bg-slate-900 rounded-3xl p-6 text-center shadow-sm border border-slate-100 dark:border-slate-800 mb-4';
+                    div.innerHTML = `
+                        <div class="text-4xl mb-3">🎯</div>
+                        <h2 class="text-lg font-black text-slate-800 dark:text-white mb-2">Welcome!</h2>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">Let's set up your daily calorie and macro targets first.</p>
+                        <button onclick="switchView('goals')" class="bg-blue-500 text-white font-bold rounded-xl px-4 py-2 text-sm active:scale-95 transition-transform">Set Goals Now</button>
+                    `;
+                    homeChartsEl.parentNode.insertBefore(div, homeChartsEl);
+                }
+                homeChartsEl.classList.add('hidden');
+            } else {
+                if (emptyStateEl) emptyStateEl.remove();
+                homeChartsEl.classList.remove('hidden');
+                
+                document.getElementById('val-cal-remaining').textContent = appState.targets.cal - appState.totals.cal;
+                document.getElementById('val-cal-eaten').textContent = appState.totals.cal; document.getElementById('val-cal-goal').textContent = appState.targets.cal;
+                document.getElementById('val-p').textContent = Math.round(appState.totals.p); document.getElementById('val-c').textContent = Math.round(appState.totals.c); document.getElementById('val-f').textContent = Math.round(appState.totals.f);
+                document.getElementById('target-p').textContent = appState.targets.p; document.getElementById('target-c').textContent = appState.targets.c; document.getElementById('target-f').textContent = appState.targets.f;
+
+                setTimeout(updateDonutChart, 50); 
+            }
+
+            // Populate the new Datalist (Autocomplete)
+            const listEl = document.getElementById('food-database-list');
+            listEl.innerHTML = '';
+            [...appState.foodDatabase].sort((a, b) => a.name.localeCompare(b.name)).forEach(food => { 
+                const opt = document.createElement('option'); 
+                opt.value = food.name;
+                listEl.appendChild(opt); 
+            });
+
+            // Populate Diary
+            const diaryContainer = document.getElementById('diary-container'); diaryContainer.innerHTML = '';
+            if (appState.diary.length === 0) { diaryContainer.innerHTML = `<div class="text-center py-4 text-xs text-slate-400 italic">No meals logged today.</div>`; return; }
+
+            [...appState.diary].reverse().forEach(entry => {
+                const item = document.createElement('div'); item.className = 'flex justify-between items-center py-3 border-b border-slate-50 dark:border-slate-800 last:border-0 last:pb-0';
+                item.innerHTML = `
+                    <div class="flex-1 pr-3 overflow-hidden">
+                        <div class="flex items-center gap-2"><div class="font-bold text-slate-800 dark:text-slate-200 text-sm truncate">${entry.label}</div><div class="text-[9px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded shrink-0">${formatTime12(entry.time)}</div></div>
+                        <div class="text-[11px] font-bold text-slate-400 mt-1 flex gap-2"><span>P: <strong class="text-slate-600 dark:text-slate-300">${entry.p}g</strong></span> <span>C: <strong class="text-slate-600 dark:text-slate-300">${entry.c}g</strong></span> <span>F: <strong class="text-slate-600 dark:text-slate-300">${entry.f}g</strong></span></div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="font-black text-slate-900 dark:text-white">${entry.cal} <span class="text-[9px] text-slate-400 uppercase">kcal</span></div>
+                        <button onclick="deleteDiaryEntry(${entry.id})" class="text-slate-300 hover:text-red-500 p-1 ml-1"><svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg></button>
+                    </div>`;
+                diaryContainer.appendChild(item);
+            });
+        }
+
+        function renderDatabase() {
+            const container = document.getElementById('db-list-container'); container.innerHTML = '';
+            [...appState.foodDatabase].sort((a, b) => a.name.localeCompare(b.name)).forEach(food => {
+                const el = document.createElement('div'); el.className = 'bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-100 dark:border-slate-800 flex justify-between items-center';
+                el.innerHTML = `
+                    <div class="flex-1">
+                        <div class="font-bold text-sm text-slate-800 dark:text-white flex items-center gap-2">${food.name} <span class="text-[9px] text-slate-400 font-bold uppercase bg-slate-50 dark:bg-slate-800 px-1 py-0.5 rounded">(per ${food.serving}g)</span></div>
+                        <div class="text-[10px] uppercase font-bold tracking-wider text-slate-500 mt-1">${food.cal}kcal <span class="mx-1 text-slate-300">|</span> P:${food.p} C:${food.c} F:${food.f}</div>
+                    </div>
+                    <button onclick="deleteDBFood(${food.id})" class="text-slate-300 hover:text-red-500 p-2"><svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg></button>`;
+                container.appendChild(el);
+            });
+        }
+
+        function renderWeight() {
+            drawWeightChart();
+            const container = document.getElementById('weight-history-container'); const viewType = document.getElementById('weight-view-type').value; container.innerHTML = '';
+            if (appState.weightLog.length === 0) { container.innerHTML = `<div class="text-center py-6 text-xs text-slate-400 italic p-4">No weigh-ins logged.</div>`; return; }
+
+            if (viewType === 'all') {
+                const sortedLogs = [...appState.weightLog].sort((a,b) => new Date(`${b.date}T${b.time || '00:00'}`) - new Date(`${a.date}T${a.time || '00:00'}`));
+                sortedLogs.forEach(log => {
+                    const el = document.createElement('div'); el.className = 'flex justify-between items-center py-3 px-4 border-b border-slate-50 dark:border-slate-800 last:border-0';
+                    el.innerHTML = `
+                        <div><div class="text-sm font-bold text-slate-800 dark:text-white">${log.date}</div><div class="text-[10px] font-bold text-slate-400">${formatTime12(log.time) || 'No Time'}</div></div>
+                        <div class="flex items-center gap-3"><div class="font-black text-slate-800 dark:text-white">${log.weight} <span class="text-[10px] text-slate-400 uppercase tracking-wider">lbs</span></div><button onclick="deleteWeightEntry(${log.id || 0})" class="text-slate-300 hover:text-red-500 p-1"><svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg></button></div>`;
+                    container.appendChild(el);
+                });
+            } else {
+                const groupedData = groupData([...appState.weightLog].sort((a,b)=> new Date(a.date)-new Date(b.date)), viewType, 'weight');
+                groupedData.forEach(log => {
+                    const el = document.createElement('div'); el.className = 'flex justify-between items-center py-3 px-4 border-b border-slate-50 dark:border-slate-800 last:border-0';
+                    el.innerHTML = `<div class="text-sm font-bold text-slate-500 dark:text-slate-400">${log.display}</div><div class="font-black text-slate-800 dark:text-white">${log.avg} <span class="text-[10px] text-slate-400 uppercase tracking-wider">lbs</span></div>`;
+                    container.appendChild(el);
+                });
+            }
+        }
+
+        function renderHistory() {
+            drawHistoryChart();
+            const container = document.getElementById('long-history-container'); const viewType = document.getElementById('history-view-type').value; container.innerHTML = '';
+            if (appState.history.length === 0) { container.innerHTML = `<div class="text-center py-6 text-xs text-slate-400 italic">No past history recorded yet.</div>`; return; }
+
+            const groupedData = groupData([...appState.history].sort((a,b)=> new Date(a.date)-new Date(b.date)), viewType, 'totals');
+            groupedData.forEach(day => {
+                const card = document.createElement('div'); card.className = 'bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-100 dark:border-slate-800';
+                card.innerHTML = `
+                    <div class="flex justify-between items-center mb-2 border-b border-slate-50 dark:border-slate-800 pb-2"><span class="font-bold text-slate-800 dark:text-white text-sm">${day.display}</span><span class="font-black text-slate-900 dark:text-white">${day.avg} <span class="text-[10px] text-slate-400 uppercase tracking-wider">kcal</span></span></div>
+                    <div class="flex justify-between text-[11px] font-bold text-slate-500 uppercase tracking-wider"><span>Pro: <strong class="text-slate-700 dark:text-slate-300">${day.p}g</strong></span><span>Carb: <strong class="text-slate-700 dark:text-slate-300">${day.c}g</strong></span><span>Fat: <strong class="text-slate-700 dark:text-slate-300">${day.f}g</strong></span></div>`;
+                container.appendChild(card);
+            });
+        }
+
+        function applyEngineLockVisuals() {
+            const isLocked = appState.settings.isCalLocked;
+            const btnLock = document.getElementById('btn-lock-cal'); const iconLock = document.getElementById('icon-lock'); const iconUnlock = document.getElementById('icon-unlock'); const calInput = document.getElementById('goal-engine-cal');
+            if (isLocked) {
+                iconUnlock.classList.add('hidden'); iconLock.classList.remove('hidden'); btnLock.classList.replace('bg-slate-100', 'bg-blue-50'); btnLock.classList.add('border-blue-200'); calInput.readOnly = true; calInput.classList.add('bg-slate-100', 'text-blue-500'); document.getElementById('lock-hint').classList.remove('hidden');
+            } else {
+                iconLock.classList.add('hidden'); iconUnlock.classList.remove('hidden'); btnLock.classList.replace('bg-blue-50', 'bg-slate-100'); btnLock.classList.remove('border-blue-200'); calInput.readOnly = false; calInput.classList.remove('bg-slate-100', 'text-blue-500'); document.getElementById('lock-hint').classList.add('hidden');
+            }
+        }
+
+        function calculateEngine(changedTrigger) {
+            let cal = parseInt(document.getElementById('goal-engine-cal').value) || 0; let p = parseInt(document.getElementById('goal-engine-p').value) || 0; let c = parseInt(document.getElementById('goal-engine-c').value) || 0; let f = parseInt(document.getElementById('goal-engine-f').value) || 0;
+
+            if (changedTrigger === 'cal' || changedTrigger === 'tdee') {
+                if (p === 0 && c === 0 && f === 0) { p = Math.round((cal * 0.3) / 4); c = Math.round((cal * 0.4) / 4); f = Math.round((cal * 0.3) / 9); } 
+                else { const currentTotal = (p * 4) + (c * 4) + (f * 9); const ratio = cal / currentTotal; p = Math.round(p * ratio); c = Math.round(c * ratio); f = Math.round(f * ratio); }
+                document.getElementById('goal-engine-p').value = p; document.getElementById('goal-engine-c').value = c; document.getElementById('goal-engine-f').value = f; cal = (p * 4) + (c * 4) + (f * 9); document.getElementById('goal-engine-cal').value = cal;
+            } else if (!appState.settings.isCalLocked) { cal = (p * 4) + (c * 4) + (f * 9); document.getElementById('goal-engine-cal').value = cal; } 
+            else {
+                if (changedTrigger === 'p' || changedTrigger === 'f') { const remaining = cal - ((p * 4) + (f * 9)); c = Math.max(0, Math.round(remaining / 4)); document.getElementById('goal-engine-c').value = c; } 
+                else if (changedTrigger === 'c') { const remaining = cal - ((p * 4) + (c * 4)); f = Math.max(0, Math.round(remaining / 9)); document.getElementById('goal-engine-f').value = f; }
+            }
+
+            const realTotal = (p*4) + (c*4) + (f*9) || 1;
+            document.getElementById('pct-p').textContent = Math.round(((p*4)/realTotal)*100) + '%'; document.getElementById('pct-c').textContent = Math.round(((c*4)/realTotal)*100) + '%'; document.getElementById('pct-f').textContent = Math.round(((f*9)/realTotal)*100) + '%';
+
+            const circumference = 251.2;
+            document.getElementById('goal-chart-f').style.strokeDasharray = `${((f*9)/realTotal)*circumference} ${circumference}`; document.getElementById('goal-chart-f').style.strokeDashoffset = 0;
+            document.getElementById('goal-chart-c').style.strokeDasharray = `${((c*4)/realTotal)*circumference} ${circumference}`; document.getElementById('goal-chart-c').style.strokeDashoffset = -(((f*9)/realTotal)*circumference);
+            document.getElementById('goal-chart-p').style.strokeDasharray = `${((p*4)/realTotal)*circumference} ${circumference}`; document.getElementById('goal-chart-p').style.strokeDashoffset = -((((f*9)+(c*4))/realTotal)*circumference);
+        }
+
+        function renderGoalsForm() {
+            document.getElementById('goal-weight').value = appState.settings.goalWeight; document.getElementById('goal-rate').value = appState.settings.rate; document.getElementById('goal-tdee').value = appState.settings.tdee;
+            document.getElementById('goal-engine-cal').value = appState.targets.cal; document.getElementById('goal-engine-p').value = appState.targets.p; document.getElementById('goal-engine-c').value = appState.targets.c; document.getElementById('goal-engine-f').value = appState.targets.f;
+            applyEngineLockVisuals(); calculateEngine('init');
+        }
+
+        // ==========================================
+        // EVENT LISTENERS
+        // ==========================================
+        document.getElementById('btn-lock-cal').addEventListener('click', () => { appState.settings.isCalLocked = !appState.settings.isCalLocked; applyEngineLockVisuals(); calculateEngine('lock'); });
+        document.getElementById('goal-engine-cal').addEventListener('input', () => calculateEngine('cal')); document.getElementById('goal-engine-p').addEventListener('input', () => calculateEngine('p'));
+        document.getElementById('goal-engine-c').addEventListener('input', () => calculateEngine('c')); document.getElementById('goal-engine-f').addEventListener('input', () => calculateEngine('f'));
+
+        document.getElementById('btn-calc-tdee').addEventListener('click', () => {
+            const tdee = parseInt(document.getElementById('goal-tdee').value) || 0; const rate = parseFloat(document.getElementById('goal-rate').value) || 0;
+            if (tdee > 0) { const targetCal = tdee + (rate * 500); document.getElementById('goal-engine-cal').value = Math.round(targetCal); calculateEngine('tdee'); }
+        });
+
+        document.getElementById('weight-view-type').addEventListener('change', renderWeight); document.getElementById('history-view-type').addEventListener('change', renderHistory);
+
+        document.getElementById('btn-save-engine').addEventListener('click', () => {
+            appState.targets.cal = parseInt(document.getElementById('goal-engine-cal').value, 10) || 2000; appState.targets.p = parseInt(document.getElementById('goal-engine-p').value, 10) || 0;
+            appState.targets.c = parseInt(document.getElementById('goal-engine-c').value, 10) || 0; appState.targets.f = parseInt(document.getElementById('goal-engine-f').value, 10) || 0;
+            appState.settings.goalWeight = document.getElementById('goal-weight').value; appState.settings.rate = document.getElementById('goal-rate').value; appState.settings.tdee = document.getElementById('goal-tdee').value;
+            saveState();
+            const btn = document.getElementById('btn-save-engine'); btn.textContent = "Goals Applied!"; btn.classList.replace('bg-slate-900', 'bg-emerald-500');
+            setTimeout(() => { btn.textContent = "Update Master Goals"; btn.classList.replace('bg-emerald-500', 'bg-slate-900'); renderHome(); }, 1500);
+        });
+
+        window.deleteDiaryEntry = function(id) {
+            const index = appState.diary.findIndex(e => e.id === id);
+            if (index > -1) {
+                const entry = appState.diary[index];
+                appState.totals.cal = Math.max(0, appState.totals.cal - entry.cal); appState.totals.p = Math.max(0, Math.round((appState.totals.p - entry.p) * 10) / 10);
+                appState.totals.c = Math.max(0, Math.round((appState.totals.c - entry.c) * 10) / 10); appState.totals.f = Math.max(0, Math.round((appState.totals.f - entry.f) * 10) / 10);
+                appState.diary.splice(index, 1); saveState(); renderHome();
+            }
+        };
+
+        window.deleteDBFood = function(id) { if(confirm("Delete this food from your database?")) { appState.foodDatabase = appState.foodDatabase.filter(f => f.id !== id); saveState(); renderDatabase(); } }
+        window.deleteWeightEntry = function(id) { if(confirm("Remove this log?")) { appState.weightLog = appState.weightLog.filter(log => log.id !== id); saveState(); renderWeight(); } }
+
+        // Updated Home Logging Logic to accommodate the autocomplete datalist
+        document.getElementById('btn-home-log').addEventListener('click', () => {
+            const searchEl = document.getElementById('home-db-search'); 
+            const gramsEl = document.getElementById('home-db-grams'); 
+            const timeEl = document.getElementById('home-log-time');
+            
+            const foodName = searchEl.value.trim(); 
+            const grams = parseFloat(gramsEl.value); 
+            const timeVal = timeEl.value;
+            
+            if (!foodName || isNaN(grams) || grams <= 0 || !timeVal) { 
+                gramsEl.classList.add('border-red-400'); 
+                setTimeout(() => gramsEl.classList.remove('border-red-400'), 600); 
+                return; 
+            }
+
+            const food = appState.foodDatabase.find(f => f.name.toLowerCase() === foodName.toLowerCase()); 
+            if (!food) {
+                alert("Food not found in database. Scan or create it first.");
+                return;
+            }
+
+            const multi = grams / food.serving;
+            appState.diary.push({ id: Date.now(), time: timeVal, label: `${food.name} (${grams}g)`, cal: Math.round(food.cal * multi), p: Math.round((food.p * multi) * 10) / 10, c: Math.round((food.c * multi) * 10) / 10, f: Math.round((food.f * multi) * 10) / 10 });
+            appState.totals.cal += Math.round(food.cal * multi); appState.totals.p += (food.p * multi); appState.totals.c += (food.c * multi); appState.totals.f += (food.f * multi);
+            appState.diary.sort((a, b) => a.time.localeCompare(b.time)); saveState(); gramsEl.value = ''; searchEl.value = ''; renderHome();
+        });
+
+        // Quick Add Form Submission Logic
+        document.getElementById('btn-submit-quick-add').addEventListener('click', () => {
+            const name = document.getElementById('quick-add-name').value || "Quick Add Meal";
+            const cal = parseFloat(document.getElementById('quick-add-cal').value) || 0;
+            const p = parseFloat(document.getElementById('quick-add-p').value) || 0;
+            const c = parseFloat(document.getElementById('quick-add-c').value) || 0;
+            const f = parseFloat(document.getElementById('quick-add-f').value) || 0;
+            
+            if(cal === 0 && p === 0 && c === 0 && f === 0) return alert("Please enter some macros or calories.");
+
+            const timeVal = document.getElementById('home-log-time').value || `${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`;
+
+            appState.diary.push({ id: Date.now(), time: timeVal, label: name, cal: Math.round(cal), p: Math.round(p*10)/10, c: Math.round(c*10)/10, f: Math.round(f*10)/10 });
+            appState.totals.cal += Math.round(cal);
+            appState.totals.p += p;
+            appState.totals.c += c;
+            appState.totals.f += f;
+            appState.diary.sort((a, b) => a.time.localeCompare(b.time));
+            
+            saveState();
+            document.getElementById('quick-add-modal').classList.add('hidden');
+            document.getElementById('quick-add-name').value = '';
+            document.getElementById('quick-add-cal').value = '';
+            document.getElementById('quick-add-p').value = '';
+            document.getElementById('quick-add-c').value = '';
+            document.getElementById('quick-add-f').value = '';
+            renderHome();
+        });
+
+        document.getElementById('btn-save-db').addEventListener('click', () => {
+            const nameEl = document.getElementById('new-db-name'); const servingEl = document.getElementById('new-db-serving'); const calEl = document.getElementById('new-db-cal'); const pEl = document.getElementById('new-db-p'); const cEl = document.getElementById('new-db-c'); const fEl = document.getElementById('new-db-f');
+            const name = nameEl.value.trim(); const serving = parseFloat(servingEl.value); const cal = parseFloat(calEl.value);
+            if (!name || isNaN(cal) || isNaN(serving) || serving <= 0) { alert("Name, Serving Size, and Calories are required."); return; }
+
+            appState.foodDatabase.push({ id: Date.now(), name: name, serving: serving, cal: cal, p: parseFloat(pEl.value) || 0, c: parseFloat(cEl.value) || 0, f: parseFloat(fEl.value) || 0 });
+            saveState(); nameEl.value=''; servingEl.value=''; calEl.value=''; pEl.value=''; cEl.value=''; fEl.value=''; renderDatabase();
+        });
+
+        document.getElementById('btn-log-weight').addEventListener('click', () => {
+            const dateInput = document.getElementById('weight-date').value; const timeInput = document.getElementById('weight-time').value; const weightInput = document.getElementById('input-weight').value; const w = parseFloat(weightInput);
+            if (!dateInput || isNaN(w) || w <= 0) return;
+            appState.weightLog.push({ id: Date.now(), date: dateInput, time: timeInput, weight: w }); saveState(); document.getElementById('input-weight').value = ''; renderWeight();
+        });
+
+        document.getElementById('history-date-picker').addEventListener('change', (e) => {
+            const dateStr = e.target.value; const resultDiv = document.getElementById('history-lookup-result');
+            if (!dateStr) { resultDiv.classList.add('hidden'); return; } resultDiv.classList.remove('hidden');
+
+            let targetData = null;
+            if (dateStr === getFormattedDateString()) { targetData = { totals: appState.totals, diary: appState.diary }; } 
+            else { targetData = appState.history.find(h => h.date === dateStr); }
+
+            if (!targetData) { resultDiv.innerHTML = `<div class="p-4 bg-slate-50 dark:bg-slate-800 rounded-xl text-center text-sm text-slate-500 font-bold border border-slate-200 dark:border-slate-700">No data found for this date.</div>`; return; }
+
+            let diaryHTML = '';
+            if (targetData.diary && targetData.diary.length > 0) {
+                diaryHTML = targetData.diary.map(entry => `<div class="flex justify-between items-center py-2 border-t border-slate-100 dark:border-slate-700 mt-2 pt-2"><div class="text-xs"><div class="font-bold text-slate-700 dark:text-slate-200">${entry.label}</div><div class="text-[9px] text-slate-400 uppercase">${formatTime12(entry.time)}</div></div><div class="text-xs font-black">${entry.cal} kcal</div></div>`).join('');
+            } else { diaryHTML = `<div class="text-[10px] text-slate-400 italic mt-2 border-t border-slate-100 dark:border-slate-700 pt-2">Detailed diary data unavailable.</div>`; }
+
+            resultDiv.innerHTML = `<div class="p-4 bg-blue-50 dark:bg-slate-800 rounded-xl border border-blue-100 dark:border-slate-700"><div class="flex justify-between items-end mb-2"><div class="text-xs font-bold text-blue-500 uppercase tracking-widest">Totals Found</div><div class="text-lg font-black text-slate-900 dark:text-white">${targetData.totals.cal} <span class="text-[10px] uppercase text-slate-500">kcal</span></div></div><div class="flex justify-between text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-2"><span>Pro: ${Math.round(targetData.totals.p)}g</span><span>Carb: ${Math.round(targetData.totals.c)}g</span><span>Fat: ${Math.round(targetData.totals.f)}g</span></div>${diaryHTML}</div>`;
+        });
+
+        // Backup features kept for safety!
+        document.getElementById('btn-export').addEventListener('click', () => {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appState)); const downloadAnchorNode = document.createElement('a'); downloadAnchorNode.setAttribute("href", dataStr); downloadAnchorNode.setAttribute("download", `macro_tracker_backup_${getFormattedDateString()}.json`); document.body.appendChild(downloadAnchorNode); downloadAnchorNode.click(); downloadAnchorNode.remove();
+        });
+
+        document.getElementById('btn-import').addEventListener('click', () => { document.getElementById('file-import').click(); });
+        document.getElementById('file-import').addEventListener('change', (e) => {
+            const file = e.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async function(event) {
+                try {
+                    const importedData = JSON.parse(event.target.result);
+                    if (importedData && importedData.targets && importedData.totals) {
+                        appState = importedData; await saveState(); alert("Data successfully imported & synced to cloud!"); location.reload(); 
+                    } else { alert("Invalid backup file format."); }
+                } catch (err) { alert("Error reading the file."); }
+            };
+            reader.readAsText(file);
+        });
+    </script>
+</body>
+</html>
