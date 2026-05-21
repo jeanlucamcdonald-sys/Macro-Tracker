@@ -11,6 +11,8 @@
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .chart-ring { transition: stroke-dasharray 0.8s ease-out, stroke-dashoffset 0.8s ease-out; }
+        /* Hide native date picker arrow on webkit */
+        input[type="date"]::-webkit-calendar-picker-indicator { background: transparent; bottom: 0; color: transparent; cursor: pointer; height: auto; left: 0; position: absolute; right: 0; top: 0; width: auto; }
     </style>
 </head>
 <body class="bg-slate-50 dark:bg-slate-950 font-sans antialiased text-slate-900 dark:text-slate-100 transition-colors duration-300">
@@ -73,7 +75,6 @@
                 <div>
                     <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Gemini API Key (For Label OCR)</label>
                     <input type="password" id="api-key-input" placeholder="AIzaSy..." class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs focus:outline-none dark:text-white mt-1">
-                    <p class="text-[9px] text-slate-400 mt-1">Stored locally in your browser. <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-blue-500 underline">Get a free key</a></p>
                 </div>
 
                 <div class="grid grid-cols-2 gap-3 mt-4">
@@ -101,9 +102,13 @@
             
             <div id="view-home" class="app-view p-4 pt-6 block">
                 <div class="flex justify-between items-center mb-6 px-1">
-                    <div>
-                        <h1 class="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight">Today</h1>
-                        <div class="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest" id="display-date"></div>
+                    <div class="relative inline-block">
+                        <div class="flex items-center gap-2 cursor-pointer text-slate-800 dark:text-slate-100 hover:text-blue-500 transition-colors">
+                            <input type="date" id="home-date-picker" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                            <h1 class="text-2xl font-black tracking-tight" id="home-display-date-main">Today</h1>
+                            <svg class="w-5 h-5 text-slate-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                        </div>
+                        <div class="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1" id="display-date"></div>
                     </div>
                 </div>
 
@@ -186,14 +191,13 @@
                     <div class="flex flex-col gap-2">
                         <div class="flex gap-2">
                             <input type="time" id="home-log-time" class="w-1/3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2 py-3 text-xs font-semibold focus:outline-none dark:text-white text-center">
-                            
                             <input list="food-database-list" id="home-db-search" placeholder="Search database..." class="w-2/3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-3 text-sm font-medium focus:outline-none dark:text-white">
                             <datalist id="food-database-list"></datalist>
                         </div>
                         <div class="flex gap-2">
                             <div class="relative flex-1">
-                                <label class="absolute top-1/2 right-3 -translate-y-1/2 text-xs font-bold text-slate-400">g</label>
-                                <input type="number" id="home-db-grams" placeholder="Weighed Amount" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-4 pr-8 py-3 text-sm font-semibold focus:outline-none dark:text-white">
+                                <label id="home-unit-label" class="absolute top-1/2 right-3 -translate-y-1/2 text-xs font-bold text-slate-400">g</label>
+                                <input type="number" id="home-db-grams" placeholder="Amount" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-4 pr-10 py-3 text-sm font-semibold focus:outline-none dark:text-white">
                             </div>
                             <button id="btn-home-log" class="w-1/4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black rounded-xl px-2 active:scale-[0.95] transition-transform shadow-sm">Add</button>
                         </div>
@@ -212,17 +216,46 @@
                     <h2 class="text-slate-800 dark:text-white font-bold mb-1">Create New Food</h2>
                     <div class="space-y-3">
                         <input type="text" id="new-db-name" placeholder="Food Name" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none dark:text-white">
+                        
                         <div class="flex gap-2">
                             <div class="relative w-1/2">
-                                <label class="absolute -top-2 left-2 bg-white dark:bg-slate-900 px-1 text-[9px] font-bold tracking-wider uppercase text-slate-400">Serving (g)</label>
-                                <input type="number" id="new-db-serving" placeholder="100" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm font-bold focus:outline-none text-center dark:text-white">
+                                <label class="absolute -top-2 left-2 bg-white dark:bg-slate-900 px-1 text-[9px] font-bold tracking-wider uppercase text-slate-400">Category</label>
+                                <select id="new-db-category" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm font-bold focus:outline-none dark:text-white appearance-none">
+                                    <option value="Proteins">Proteins</option>
+                                    <option value="Carbs">Carbs</option>
+                                    <option value="Fats">Fats</option>
+                                    <option value="Fruits & Veg">Fruits & Veg</option>
+                                    <option value="Dairy">Dairy</option>
+                                    <option value="Snacks & Sweets">Snacks & Sweets</option>
+                                    <option value="Beverages">Beverages</option>
+                                    <option value="Other">Other</option>
+                                </select>
                             </div>
-                            <div class="relative w-1/2">
+                            <div class="relative w-1/4">
+                                <label class="absolute -top-2 left-2 bg-white dark:bg-slate-900 px-1 text-[9px] font-bold tracking-wider uppercase text-slate-400">Amount</label>
+                                <input type="number" id="new-db-serving" placeholder="1" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm font-bold focus:outline-none text-center dark:text-white">
+                            </div>
+                            <div class="relative w-1/4">
+                                <label class="absolute -top-2 left-2 bg-white dark:bg-slate-900 px-1 text-[9px] font-bold tracking-wider uppercase text-slate-400">Unit</label>
+                                <select id="new-db-unit" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2 py-2.5 text-xs font-bold focus:outline-none dark:text-white appearance-none text-center">
+                                    <option value="g">g</option>
+                                    <option value="oz">oz</option>
+                                    <option value="lbs">lbs</option>
+                                    <option value="cup">cup</option>
+                                    <option value="scoop">scoop</option>
+                                    <option value="tbsp">tbsp</option>
+                                    <option value="tsp">tsp</option>
+                                    <option value="ml">ml</option>
+                                    <option value="piece">piece</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-2 mt-2">
+                            <div class="relative w-full">
                                 <label class="absolute -top-2 left-2 bg-white dark:bg-slate-900 px-1 text-[9px] font-bold tracking-wider uppercase text-slate-400">Calories</label>
                                 <input type="number" id="new-db-cal" placeholder="0" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm font-bold focus:outline-none text-center dark:text-white">
                             </div>
-                        </div>
-                        <div class="flex gap-2 mt-2">
                             <div class="relative w-full">
                                 <label class="absolute -top-2 left-2 bg-white dark:bg-slate-900 px-1 text-[9px] font-bold tracking-wider uppercase text-red-400">Pro</label>
                                 <input type="number" id="new-db-p" placeholder="0" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm font-bold focus:outline-none text-center dark:text-white">
@@ -239,8 +272,8 @@
                         <button id="btn-save-db" class="w-full bg-blue-500 text-white font-bold rounded-xl py-3 mt-2 active:scale-[0.98] transition-transform">Save to Database</button>
                     </div>
                 </div>
-                <h2 class="text-slate-500 dark:text-slate-400 uppercase tracking-widest text-[10px] font-bold mb-3 pl-1">Your Foods</h2>
-                <div id="db-list-container" class="space-y-2"></div>
+                
+                <div id="db-list-container" class="space-y-4"></div>
             </div>
 
             <div id="view-weight" class="app-view p-4 pt-6 hidden">
@@ -427,7 +460,9 @@
                 </button>
             </div>
         </div>
-    </div> <style>
+    </div> 
+    
+    <style>
         .nav-btn.active { color: #0f172a; }
         @media (prefers-color-scheme: dark) { .nav-btn.active { color: #ffffff; } }
     </style>
@@ -437,7 +472,6 @@
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-        // ==========================================
         const firebaseConfig = {
           apiKey: "AIzaSyDFghUuWeunz4lPrL-PKYH7pVVPXNt65A0",
           authDomain: "cal-tracker-70796.firebaseapp.com",
@@ -448,26 +482,31 @@
           measurementId: "G-EKJ3KQ8SV0"
         };
 
-     const app = initializeApp(firebaseConfig);
-     const auth = getAuth(app);
-     const db = getFirestore(app);
-     const provider = new GoogleAuthProvider();
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const provider = new GoogleAuthProvider();
 
-provider.setCustomParameters({
-    prompt: 'select_account'
-});
+        provider.setCustomParameters({
+            prompt: 'select_account'
+        });
+
         let currentUser = null;
 
+        // EXPANDED DB WITH CATEGORIES AND UNITS
         const DEFAULT_FOOD_DB = [
-            { id: 1, name: "ON Protein Powder", serving: 100, cal: 380, p: 77, c: 9, f: 3 },
-            { id: 2, name: "2% Greek Yogurt", serving: 100, cal: 73, p: 10, c: 3, f: 2 },
-            { id: 3, name: "Mixed Berries", serving: 100, cal: 50, p: 1, c: 12, f: 0.5 },
-            { id: 4, name: "Chicken Breast (Raw)", serving: 100, cal: 110, p: 23, c: 0, f: 1.2 },
-            { id: 5, name: "93% Ground Beef (Raw)", serving: 100, cal: 150, p: 21, c: 0, f: 7 },
-            { id: 6, name: "Sweet Potatoes (Raw)", serving: 100, cal: 86, p: 1.6, c: 20, f: 0.1 },
-            { id: 7, name: "Eggs (Raw, Whole)", serving: 100, cal: 143, p: 12.6, c: 0.7, f: 9.5 },
-            { id: 8, name: "Jasmine Rice (Dry)", serving: 100, cal: 360, p: 7, c: 80, f: 1 },
-            { id: 9, name: "Avocado Oil", serving: 100, cal: 884, p: 0, c: 0, f: 100 }
+            { id: 1, category: "Proteins", name: "ON Whey Protein", serving: 1, unit: "scoop", cal: 120, p: 24, c: 3, f: 1 },
+            { id: 2, category: "Dairy", name: "2% Greek Yogurt", serving: 170, unit: "g", cal: 120, p: 17, c: 5, f: 3 },
+            { id: 3, category: "Fruits & Veg", name: "Mixed Berries", serving: 1, unit: "cup", cal: 70, p: 1, c: 15, f: 0.5 },
+            { id: 4, category: "Proteins", name: "Chicken Breast (Raw)", serving: 4, unit: "oz", cal: 136, p: 26, c: 0, f: 2.8 },
+            { id: 5, category: "Proteins", name: "93% Ground Beef (Raw)", serving: 4, unit: "oz", cal: 170, p: 24, c: 0, f: 8 },
+            { id: 6, category: "Carbs", name: "Sweet Potatoes (Raw)", serving: 100, unit: "g", cal: 86, p: 1.6, c: 20, f: 0.1 },
+            { id: 7, category: "Proteins", name: "Eggs (Whole)", serving: 1, unit: "piece", cal: 72, p: 6, c: 0.4, f: 4.8 },
+            { id: 8, category: "Carbs", name: "Jasmine Rice (Dry)", serving: 0.25, unit: "cup", cal: 160, p: 3, c: 36, f: 0 },
+            { id: 9, category: "Fats", name: "Avocado Oil", serving: 1, unit: "tbsp", cal: 120, p: 0, c: 0, f: 14 },
+            { id: 10, category: "Carbs", name: "Oats (Dry)", serving: 0.5, unit: "cup", cal: 150, p: 5, c: 27, f: 3 },
+            { id: 11, category: "Fats", name: "Peanut Butter", serving: 2, unit: "tbsp", cal: 190, p: 7, c: 8, f: 16 },
+            { id: 12, category: "Fruits & Veg", name: "Banana", serving: 1, unit: "piece", cal: 105, p: 1.3, c: 27, f: 0.3 }
         ];
 
         let appState = {
@@ -501,6 +540,10 @@ provider.setCustomParameters({
                 mainApp.classList.remove('hidden');
                 document.getElementById('display-user-email').textContent = user.email;
                 await loadState();
+                
+                // Initialize the Home Date Picker to Today
+                document.getElementById('home-date-picker').value = getFormattedDateString();
+                
                 renderHome();
             } else {
                 currentUser = null;
@@ -517,7 +560,6 @@ provider.setCustomParameters({
                 catch (e) { console.error("Cloud Sync Error:", e); }
             }
         }
-
         window.saveState = saveState;
 
         async function loadState() {
@@ -539,19 +581,17 @@ provider.setCustomParameters({
                     const localData = localStorage.getItem(STORAGE_KEY);
                     if (localData) {
                         appState = JSON.parse(localData);
-                        await saveState(); 
+                        await saveState();
                     } else {
                         appState.foodDatabase = [...DEFAULT_FOOD_DB];
                     }
                 }
             } catch (e) {
-                console.error("Failed to load from cloud, falling back to local.", e);
                 const localData = localStorage.getItem(STORAGE_KEY);
                 if (localData) appState = JSON.parse(localData);
             }
 
             const todayStr = getFormattedDateString();
-            document.getElementById('display-date').textContent = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
             document.getElementById('weight-date').value = todayStr;
             const now = new Date();
             document.getElementById('weight-time').value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
@@ -583,7 +623,6 @@ provider.setCustomParameters({
         window.processBarcode = async function(input) {
             const file = input.files[0];
             if (!file) return;
-            
             document.getElementById('scanner-status').classList.remove('hidden');
             document.getElementById('scanner-status').textContent = "Looking for barcode...";
 
@@ -592,29 +631,16 @@ provider.setCustomParameters({
                 const imgUrl = URL.createObjectURL(file);
                 const result = await codeReader.decodeFromImageUrl(imgUrl);
                 const barcode = result.text;
-
                 document.getElementById('scanner-status').textContent = "Fetching nutrition data...";
-                
                 const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
                 const data = await res.json();
 
                 if (data.status === 1) {
                     const nut = data.product.nutriments;
-                    window.populateNewFoodForm(
-                        data.product.product_name || "Scanned Food",
-                        100, 
-                        nut['energy-kcal_100g'] || 0,
-                        nut.proteins_100g || 0,
-                        nut.carbohydrates_100g || 0,
-                        nut.fat_100g || 0
-                    );
+                    window.populateNewFoodForm(data.product.product_name || "Scanned Food", 100, "g", nut['energy-kcal_100g'] || 0, nut.proteins_100g || 0, nut.carbohydrates_100g || 0, nut.fat_100g || 0);
                     alert("Food found and added to entry form!");
-                } else {
-                    alert("Barcode not found in OpenFoodFacts database.");
-                }
-            } catch (err) {
-                alert("Could not read a barcode. Try taking a clearer photo.");
-            } finally {
+                } else { alert("Barcode not found."); }
+            } catch (err) { alert("Could not read a barcode. Try taking a clearer photo."); } finally {
                 document.getElementById('scanner-status').classList.add('hidden');
                 document.getElementById('smart-scanner-modal').classList.add('hidden');
                 input.value = ''; 
@@ -630,13 +656,11 @@ provider.setCustomParameters({
 
             const file = input.files[0];
             if (!file) return;
-
             document.getElementById('scanner-status').classList.remove('hidden');
             document.getElementById('scanner-status').textContent = "AI Reading Label...";
 
             try {
                 const base64Data = await fileToBase64(file);
-                
                 const payload = {
                     contents: [{
                         parts: [
@@ -653,43 +677,35 @@ provider.setCustomParameters({
                 });
 
                 const data = await res.json();
-                
                 if (data.error) throw new Error(data.error.message);
 
                 let rawJson = data.candidates[0].content.parts[0].text;
                 rawJson = rawJson.replace(/```json/g, '').replace(/```/g, '').trim();
-                
                 const nutrition = JSON.parse(rawJson);
-                window.populateNewFoodForm(nutrition.name, nutrition.serving_g, nutrition.cal, nutrition.pro, nutrition.carb, nutrition.fat);
+                
+                window.populateNewFoodForm(nutrition.name, nutrition.serving_g, "g", nutrition.cal, nutrition.pro, nutrition.carb, nutrition.fat);
                 alert("Label successfully read!");
 
-            } catch (err) {
-                console.error(err);
-                alert("AI failed to read the label. Make sure the image is clear. Error: " + err.message);
-            } finally {
+            } catch (err) { alert("AI failed to read the label. " + err.message); } finally {
                 document.getElementById('scanner-status').classList.add('hidden');
                 document.getElementById('smart-scanner-modal').classList.add('hidden');
                 input.value = ''; 
             }
         }
 
-        window.populateNewFoodForm = function(name, serving, cal, p, c, f) {
+        window.populateNewFoodForm = function(name, serving, unit, cal, p, c, f) {
             window.switchView('database');
             document.getElementById('new-db-name').value = name;
             document.getElementById('new-db-serving').value = Math.round(serving);
+            document.getElementById('new-db-unit').value = unit;
             document.getElementById('new-db-cal').value = Math.round(cal);
             document.getElementById('new-db-p').value = Math.round(p);
             document.getElementById('new-db-c').value = Math.round(c);
             document.getElementById('new-db-f').value = Math.round(f);
         }
 
-        window.addEventListener('DOMContentLoaded', () => {
-            const savedKey = localStorage.getItem('gemini_api_key');
-            if (savedKey) document.getElementById('api-key-input').value = savedKey;
-        });
-
         // ==========================================
-        // UI AND RENDER LOGIC
+        // UTILITIES & RENDER LOGIC
         // ==========================================
         function getFormattedDateString() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
         function formatTime12(time24) { if(!time24) return ""; let [h, m] = time24.split(':'); h = parseInt(h); const ampm = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12; return `${h}:${m.padStart(2, '0')} ${ampm}`; }
@@ -724,6 +740,33 @@ provider.setCustomParameters({
             }).reverse();
         }
 
+        // --- Core Retroactive Date Fetching Logic ---
+        function getActiveDayData() {
+            const selectedDate = document.getElementById('home-date-picker').value || getFormattedDateString();
+            if (selectedDate === getFormattedDateString()) {
+                return { totals: appState.totals, diary: appState.diary, isToday: true, date: selectedDate };
+            } else {
+                let hist = appState.history.find(h => h.date === selectedDate);
+                if (!hist) return { totals: { cal: 0, p: 0, c: 0, f: 0 }, diary: [], isToday: false, date: selectedDate, isNewHist: true };
+                return { totals: hist.totals, diary: hist.diary, isToday: false, date: selectedDate };
+            }
+        }
+
+        function saveActiveDayData(newTotals, newDiary, activeDataInfo) {
+            if (activeDataInfo.isToday) {
+                appState.totals = newTotals; appState.diary = newDiary;
+            } else {
+                if (activeDataInfo.isNewHist) {
+                    appState.history.push({ date: activeDataInfo.date, totals: newTotals, diary: newDiary });
+                } else {
+                    let hist = appState.history.find(h => h.date === activeDataInfo.date);
+                    hist.totals = newTotals; hist.diary = newDiary;
+                }
+            }
+            saveState();
+        }
+
+
         window.switchView = function(viewId) {
             document.querySelectorAll('.app-view').forEach(el => { el.classList.add('hidden'); el.classList.remove('block'); });
             document.getElementById('view-' + viewId).classList.remove('hidden'); document.getElementById('view-' + viewId).classList.add('block');
@@ -737,8 +780,8 @@ provider.setCustomParameters({
             if(viewId === 'goals') renderGoalsForm();
         }
 
-        function updateDonutChart() {
-            const p = appState.totals.p; const c = appState.totals.c; const f = appState.totals.f;
+        function updateDonutChart(dayTotals) {
+            const p = dayTotals.p; const c = dayTotals.c; const f = dayTotals.f;
             const calGoal = appState.targets.cal || 1; const circumference = 251.2; 
             
             const pCircle = document.getElementById('chart-p'); const cCircle = document.getElementById('chart-c'); const fCircle = document.getElementById('chart-f');
@@ -761,6 +804,104 @@ provider.setCustomParameters({
                 }
             }
             styleMiniDonut('p', p, appState.targets.p, '#ef4444'); styleMiniDonut('c', c, appState.targets.c, '#3b82f6'); styleMiniDonut('f', f, appState.targets.f, '#eab308');
+        }
+
+        // React to Home Date Picker Changes
+        document.getElementById('home-date-picker').addEventListener('change', (e) => {
+            const dateStr = e.target.value;
+            const mainHeader = document.getElementById('home-display-date-main');
+            const subHeader = document.getElementById('display-date');
+            
+            if (dateStr === getFormattedDateString()) {
+                mainHeader.textContent = "Today";
+            } else {
+                const parts = dateStr.split('-');
+                mainHeader.textContent = `${parts[1]}/${parts[2]}`;
+            }
+            
+            const dateObj = new Date(dateStr + "T12:00:00");
+            subHeader.textContent = dateObj.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+            
+            renderHome();
+        });
+
+        function renderHome() {
+            if(!document.getElementById('home-log-time').value) { const now = new Date(); document.getElementById('home-log-time').value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`; }
+
+            // Pull data specifically for the selected date
+            const activeData = getActiveDayData();
+
+            document.getElementById('val-cal-remaining').textContent = appState.targets.cal - activeData.totals.cal;
+            document.getElementById('val-cal-eaten').textContent = activeData.totals.cal; document.getElementById('val-cal-goal').textContent = appState.targets.cal;
+            document.getElementById('val-p').textContent = Math.round(activeData.totals.p); document.getElementById('val-c').textContent = Math.round(activeData.totals.c); document.getElementById('val-f').textContent = Math.round(activeData.totals.f);
+            document.getElementById('target-p').textContent = appState.targets.p; document.getElementById('target-c').textContent = appState.targets.c; document.getElementById('target-f').textContent = appState.targets.f;
+
+            setTimeout(() => updateDonutChart(activeData.totals), 50); 
+
+            // Populate Food Autocomplete Datalist
+            const listEl = document.getElementById('food-database-list'); listEl.innerHTML = '';
+            [...appState.foodDatabase].sort((a, b) => a.name.localeCompare(b.name)).forEach(food => { 
+                const opt = document.createElement('option'); opt.value = food.name; listEl.appendChild(opt); 
+            });
+
+            // Render active day's diary
+            const diaryContainer = document.getElementById('diary-container'); diaryContainer.innerHTML = '';
+            if (activeData.diary.length === 0) { diaryContainer.innerHTML = `<div class="text-center py-4 text-xs text-slate-400 italic">No meals logged for this date.</div>`; return; }
+
+            [...activeData.diary].reverse().forEach(entry => {
+                const item = document.createElement('div'); item.className = 'flex justify-between items-center py-3 border-b border-slate-50 dark:border-slate-800 last:border-0 last:pb-0';
+                item.innerHTML = `
+                    <div class="flex-1 pr-3 overflow-hidden">
+                        <div class="flex items-center gap-2"><div class="font-bold text-slate-800 dark:text-slate-200 text-sm truncate">${entry.label}</div><div class="text-[9px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded shrink-0">${formatTime12(entry.time)}</div></div>
+                        <div class="text-[11px] font-bold text-slate-400 mt-1 flex gap-2"><span>P: <strong class="text-slate-600 dark:text-slate-300">${entry.p}g</strong></span> <span>C: <strong class="text-slate-600 dark:text-slate-300">${entry.c}g</strong></span> <span>F: <strong class="text-slate-600 dark:text-slate-300">${entry.f}g</strong></span></div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="font-black text-slate-900 dark:text-white">${entry.cal} <span class="text-[9px] text-slate-400 uppercase">kcal</span></div>
+                        <button onclick="deleteDiaryEntry(${entry.id})" class="text-slate-300 hover:text-red-500 p-1 ml-1"><svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg></button>
+                    </div>`;
+                diaryContainer.appendChild(item);
+            });
+        }
+
+        // Dynamic Unit Label
+        document.getElementById('home-db-search').addEventListener('input', (e) => {
+            const val = e.target.value.toLowerCase();
+            const food = appState.foodDatabase.find(f => f.name.toLowerCase() === val);
+            const unitLabel = document.getElementById('home-unit-label');
+            if (food) unitLabel.textContent = food.unit || "g";
+            else unitLabel.textContent = "g";
+        });
+
+        function renderDatabase() {
+            const container = document.getElementById('db-list-container'); container.innerHTML = '';
+            
+            // Group by Category
+            const grouped = {};
+            [...appState.foodDatabase].forEach(f => {
+                const cat = f.category || "Other";
+                if(!grouped[cat]) grouped[cat] = [];
+                grouped[cat].push(f);
+            });
+
+            // Render categories
+            Object.keys(grouped).sort().forEach(categoryName => {
+                const catGroup = document.createElement('div');
+                catGroup.innerHTML = `<h2 class="text-slate-500 dark:text-slate-400 uppercase tracking-widest text-[10px] font-bold mb-3 pl-1 border-b border-slate-200 dark:border-slate-800 pb-1">${categoryName}</h2><div class="space-y-2 mb-6" id="cat-group-${categoryName.replace(/[^a-zA-Z]/g, '')}"></div>`;
+                container.appendChild(catGroup);
+                
+                const listEl = catGroup.querySelector('div');
+                
+                grouped[categoryName].sort((a,b)=>a.name.localeCompare(b.name)).forEach(food => {
+                    const el = document.createElement('div'); el.className = 'bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-100 dark:border-slate-800 flex justify-between items-center shadow-sm';
+                    el.innerHTML = `
+                        <div class="flex-1">
+                            <div class="font-bold text-sm text-slate-800 dark:text-white flex items-center gap-2">${food.name} <span class="text-[9px] text-slate-400 font-bold uppercase bg-slate-50 dark:bg-slate-800 px-1 py-0.5 rounded">(per ${food.serving} ${food.unit || 'g'})</span></div>
+                            <div class="text-[10px] uppercase font-bold tracking-wider text-slate-500 mt-1">${food.cal}kcal <span class="mx-1 text-slate-300">|</span> P:${food.p} C:${food.c} F:${food.f}</div>
+                        </div>
+                        <button onclick="deleteDBFood(${food.id})" class="text-slate-300 hover:text-red-500 p-2"><svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg></button>`;
+                    listEl.appendChild(el);
+                });
+            });
         }
 
         function drawWeightChart() {
@@ -790,81 +931,6 @@ provider.setCustomParameters({
             const targetY = height - padding - ((appState.targets.cal / maxC) * (height - 2*padding));
             const targetLine = `<line x1="0" y1="${targetY}" x2="${width}" y2="${targetY}" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4 4" />`;
             container.innerHTML = `<svg viewBox="0 0 ${width} ${height}" class="w-full h-full overflow-visible">${rects}${targetLine}</svg>`;
-        }
-
-        function renderHome() {
-            if(!document.getElementById('home-log-time').value) { const now = new Date(); document.getElementById('home-log-time').value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`; }
-
-            const homeChartsEl = document.getElementById('home-charts');
-            let emptyStateEl = document.getElementById('home-empty-state');
-
-            // Handle Empty State / Missing Goals
-            if (!appState.targets.cal || appState.targets.cal === 0) {
-                if (!emptyStateEl) {
-                    const div = document.createElement('div');
-                    div.id = 'home-empty-state';
-                    div.className = 'bg-white dark:bg-slate-900 rounded-3xl p-6 text-center shadow-sm border border-slate-100 dark:border-slate-800 mb-4';
-                    div.innerHTML = `
-                        <div class="text-4xl mb-3">🎯</div>
-                        <h2 class="text-lg font-black text-slate-800 dark:text-white mb-2">Welcome!</h2>
-                        <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">Let's set up your daily calorie and macro targets first.</p>
-                        <button onclick="switchView('goals')" class="bg-blue-500 text-white font-bold rounded-xl px-4 py-2 text-sm active:scale-95 transition-transform">Set Goals Now</button>
-                    `;
-                    homeChartsEl.parentNode.insertBefore(div, homeChartsEl);
-                }
-                homeChartsEl.classList.add('hidden');
-            } else {
-                if (emptyStateEl) emptyStateEl.remove();
-                homeChartsEl.classList.remove('hidden');
-                
-                document.getElementById('val-cal-remaining').textContent = appState.targets.cal - appState.totals.cal;
-                document.getElementById('val-cal-eaten').textContent = appState.totals.cal; document.getElementById('val-cal-goal').textContent = appState.targets.cal;
-                document.getElementById('val-p').textContent = Math.round(appState.totals.p); document.getElementById('val-c').textContent = Math.round(appState.totals.c); document.getElementById('val-f').textContent = Math.round(appState.totals.f);
-                document.getElementById('target-p').textContent = appState.targets.p; document.getElementById('target-c').textContent = appState.targets.c; document.getElementById('target-f').textContent = appState.targets.f;
-
-                setTimeout(updateDonutChart, 50); 
-            }
-
-            // Populate the new Datalist (Autocomplete)
-            const listEl = document.getElementById('food-database-list');
-            listEl.innerHTML = '';
-            [...appState.foodDatabase].sort((a, b) => a.name.localeCompare(b.name)).forEach(food => { 
-                const opt = document.createElement('option'); 
-                opt.value = food.name;
-                listEl.appendChild(opt); 
-            });
-
-            // Populate Diary
-            const diaryContainer = document.getElementById('diary-container'); diaryContainer.innerHTML = '';
-            if (appState.diary.length === 0) { diaryContainer.innerHTML = `<div class="text-center py-4 text-xs text-slate-400 italic">No meals logged today.</div>`; return; }
-
-            [...appState.diary].reverse().forEach(entry => {
-                const item = document.createElement('div'); item.className = 'flex justify-between items-center py-3 border-b border-slate-50 dark:border-slate-800 last:border-0 last:pb-0';
-                item.innerHTML = `
-                    <div class="flex-1 pr-3 overflow-hidden">
-                        <div class="flex items-center gap-2"><div class="font-bold text-slate-800 dark:text-slate-200 text-sm truncate">${entry.label}</div><div class="text-[9px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded shrink-0">${formatTime12(entry.time)}</div></div>
-                        <div class="text-[11px] font-bold text-slate-400 mt-1 flex gap-2"><span>P: <strong class="text-slate-600 dark:text-slate-300">${entry.p}g</strong></span> <span>C: <strong class="text-slate-600 dark:text-slate-300">${entry.c}g</strong></span> <span>F: <strong class="text-slate-600 dark:text-slate-300">${entry.f}g</strong></span></div>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <div class="font-black text-slate-900 dark:text-white">${entry.cal} <span class="text-[9px] text-slate-400 uppercase">kcal</span></div>
-                        <button onclick="deleteDiaryEntry(${entry.id})" class="text-slate-300 hover:text-red-500 p-1 ml-1"><svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg></button>
-                    </div>`;
-                diaryContainer.appendChild(item);
-            });
-        }
-
-        function renderDatabase() {
-            const container = document.getElementById('db-list-container'); container.innerHTML = '';
-            [...appState.foodDatabase].sort((a, b) => a.name.localeCompare(b.name)).forEach(food => {
-                const el = document.createElement('div'); el.className = 'bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-100 dark:border-slate-800 flex justify-between items-center';
-                el.innerHTML = `
-                    <div class="flex-1">
-                        <div class="font-bold text-sm text-slate-800 dark:text-white flex items-center gap-2">${food.name} <span class="text-[9px] text-slate-400 font-bold uppercase bg-slate-50 dark:bg-slate-800 px-1 py-0.5 rounded">(per ${food.serving}g)</span></div>
-                        <div class="text-[10px] uppercase font-bold tracking-wider text-slate-500 mt-1">${food.cal}kcal <span class="mx-1 text-slate-300">|</span> P:${food.p} C:${food.c} F:${food.f}</div>
-                    </div>
-                    <button onclick="deleteDBFood(${food.id})" class="text-slate-300 hover:text-red-500 p-2"><svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg></button>`;
-                container.appendChild(el);
-            });
         }
 
         function renderWeight() {
@@ -944,9 +1010,7 @@ provider.setCustomParameters({
             applyEngineLockVisuals(); calculateEngine('init');
         }
 
-        // ==========================================
-        // EVENT LISTENERS
-        // ==========================================
+        // Event Listeners
         document.getElementById('btn-lock-cal').addEventListener('click', () => { appState.settings.isCalLocked = !appState.settings.isCalLocked; applyEngineLockVisuals(); calculateEngine('lock'); });
         document.getElementById('goal-engine-cal').addEventListener('input', () => calculateEngine('cal')); document.getElementById('goal-engine-p').addEventListener('input', () => calculateEngine('p'));
         document.getElementById('goal-engine-c').addEventListener('input', () => calculateEngine('c')); document.getElementById('goal-engine-f').addEventListener('input', () => calculateEngine('f'));
@@ -968,84 +1032,97 @@ provider.setCustomParameters({
         });
 
         window.deleteDiaryEntry = function(id) {
-            const index = appState.diary.findIndex(e => e.id === id);
+            const activeDataInfo = getActiveDayData();
+            const index = activeDataInfo.diary.findIndex(e => e.id === id);
+            
             if (index > -1) {
-                const entry = appState.diary[index];
-                appState.totals.cal = Math.max(0, appState.totals.cal - entry.cal); appState.totals.p = Math.max(0, Math.round((appState.totals.p - entry.p) * 10) / 10);
-                appState.totals.c = Math.max(0, Math.round((appState.totals.c - entry.c) * 10) / 10); appState.totals.f = Math.max(0, Math.round((appState.totals.f - entry.f) * 10) / 10);
-                appState.diary.splice(index, 1); saveState(); renderHome();
+                const entry = activeDataInfo.diary[index];
+                
+                // Recalculate totals
+                activeDataInfo.totals.cal = Math.max(0, activeDataInfo.totals.cal - entry.cal); 
+                activeDataInfo.totals.p = Math.max(0, Math.round((activeDataInfo.totals.p - entry.p) * 10) / 10);
+                activeDataInfo.totals.c = Math.max(0, Math.round((activeDataInfo.totals.c - entry.c) * 10) / 10); 
+                activeDataInfo.totals.f = Math.max(0, Math.round((activeDataInfo.totals.f - entry.f) * 10) / 10);
+                
+                // Remove entry
+                activeDataInfo.diary.splice(index, 1); 
+                
+                saveActiveDayData(activeDataInfo.totals, activeDataInfo.diary, activeDataInfo);
+                renderHome();
             }
         };
 
         window.deleteDBFood = function(id) { if(confirm("Delete this food from your database?")) { appState.foodDatabase = appState.foodDatabase.filter(f => f.id !== id); saveState(); renderDatabase(); } }
         window.deleteWeightEntry = function(id) { if(confirm("Remove this log?")) { appState.weightLog = appState.weightLog.filter(log => log.id !== id); saveState(); renderWeight(); } }
 
-        // Updated Home Logging Logic to accommodate the autocomplete datalist
+        // --- ADDING FOOD ---
         document.getElementById('btn-home-log').addEventListener('click', () => {
-            const searchEl = document.getElementById('home-db-search'); 
-            const gramsEl = document.getElementById('home-db-grams'); 
-            const timeEl = document.getElementById('home-log-time');
+            const searchEl = document.getElementById('home-db-search'); const gramsEl = document.getElementById('home-db-grams'); const timeEl = document.getElementById('home-log-time');
+            const foodName = searchEl.value.trim(); const grams = parseFloat(gramsEl.value); const timeVal = timeEl.value;
             
-            const foodName = searchEl.value.trim(); 
-            const grams = parseFloat(gramsEl.value); 
-            const timeVal = timeEl.value;
-            
-            if (!foodName || isNaN(grams) || grams <= 0 || !timeVal) { 
-                gramsEl.classList.add('border-red-400'); 
-                setTimeout(() => gramsEl.classList.remove('border-red-400'), 600); 
-                return; 
-            }
+            if (!foodName || isNaN(grams) || grams <= 0 || !timeVal) { gramsEl.classList.add('border-red-400'); setTimeout(() => gramsEl.classList.remove('border-red-400'), 600); return; }
 
             const food = appState.foodDatabase.find(f => f.name.toLowerCase() === foodName.toLowerCase()); 
-            if (!food) {
-                alert("Food not found in database. Scan or create it first.");
-                return;
-            }
+            if (!food) return alert("Food not found in database. Search exactly or add it first.");
 
             const multi = grams / food.serving;
-            appState.diary.push({ id: Date.now(), time: timeVal, label: `${food.name} (${grams}g)`, cal: Math.round(food.cal * multi), p: Math.round((food.p * multi) * 10) / 10, c: Math.round((food.c * multi) * 10) / 10, f: Math.round((food.f * multi) * 10) / 10 });
-            appState.totals.cal += Math.round(food.cal * multi); appState.totals.p += (food.p * multi); appState.totals.c += (food.c * multi); appState.totals.f += (food.f * multi);
-            appState.diary.sort((a, b) => a.time.localeCompare(b.time)); saveState(); gramsEl.value = ''; searchEl.value = ''; renderHome();
-        });
+            const newEntry = { id: Date.now(), time: timeVal, label: `${food.name} (${grams} ${food.unit || 'g'})`, cal: Math.round(food.cal * multi), p: Math.round((food.p * multi) * 10) / 10, c: Math.round((food.c * multi) * 10) / 10, f: Math.round((food.f * multi) * 10) / 10 };
+            
+            // Get current active view and add to it retroactively
+            const activeDataInfo = getActiveDayData();
+            activeDataInfo.diary.push(newEntry);
+            activeDataInfo.totals.cal += newEntry.cal; activeDataInfo.totals.p += newEntry.p; activeDataInfo.totals.c += newEntry.c; activeDataInfo.totals.f += newEntry.f;
+            activeDataInfo.diary.sort((a, b) => a.time.localeCompare(b.time));
+            
+            saveActiveDayData(activeDataInfo.totals, activeDataInfo.diary, activeDataInfo);
 
-        // Quick Add Form Submission Logic
+            gramsEl.value = ''; searchEl.value = ''; document.getElementById('home-unit-label').textContent = 'g';
+            renderHome();
+        });
+        
+        // --- QUICK ADD ---
         document.getElementById('btn-submit-quick-add').addEventListener('click', () => {
             const name = document.getElementById('quick-add-name').value || "Quick Add Meal";
             const cal = parseFloat(document.getElementById('quick-add-cal').value) || 0;
             const p = parseFloat(document.getElementById('quick-add-p').value) || 0;
             const c = parseFloat(document.getElementById('quick-add-c').value) || 0;
             const f = parseFloat(document.getElementById('quick-add-f').value) || 0;
-            
-            if(cal === 0 && p === 0 && c === 0 && f === 0) return alert("Please enter some macros or calories.");
+            if(cal === 0 && p === 0 && c === 0 && f === 0) return alert("Please enter macros or calories.");
 
             const timeVal = document.getElementById('home-log-time').value || `${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`;
-
-            appState.diary.push({ id: Date.now(), time: timeVal, label: name, cal: Math.round(cal), p: Math.round(p*10)/10, c: Math.round(c*10)/10, f: Math.round(f*10)/10 });
-            appState.totals.cal += Math.round(cal);
-            appState.totals.p += p;
-            appState.totals.c += c;
-            appState.totals.f += f;
-            appState.diary.sort((a, b) => a.time.localeCompare(b.time));
+            const newEntry = { id: Date.now(), time: timeVal, label: name, cal: Math.round(cal), p: Math.round(p*10)/10, c: Math.round(c*10)/10, f: Math.round(f*10)/10 };
             
-            saveState();
+            // Retroactive logging support
+            const activeDataInfo = getActiveDayData();
+            activeDataInfo.diary.push(newEntry);
+            activeDataInfo.totals.cal += newEntry.cal; activeDataInfo.totals.p += newEntry.p; activeDataInfo.totals.c += newEntry.c; activeDataInfo.totals.f += newEntry.f;
+            activeDataInfo.diary.sort((a, b) => a.time.localeCompare(b.time));
+            
+            saveActiveDayData(activeDataInfo.totals, activeDataInfo.diary, activeDataInfo);
+            
             document.getElementById('quick-add-modal').classList.add('hidden');
-            document.getElementById('quick-add-name').value = '';
-            document.getElementById('quick-add-cal').value = '';
-            document.getElementById('quick-add-p').value = '';
-            document.getElementById('quick-add-c').value = '';
-            document.getElementById('quick-add-f').value = '';
+            document.getElementById('quick-add-name').value = ''; document.getElementById('quick-add-cal').value = ''; document.getElementById('quick-add-p').value = ''; document.getElementById('quick-add-c').value = ''; document.getElementById('quick-add-f').value = '';
             renderHome();
         });
 
+        // --- CREATE DATABASE ITEM ---
         document.getElementById('btn-save-db').addEventListener('click', () => {
-            const nameEl = document.getElementById('new-db-name'); const servingEl = document.getElementById('new-db-serving'); const calEl = document.getElementById('new-db-cal'); const pEl = document.getElementById('new-db-p'); const cEl = document.getElementById('new-db-c'); const fEl = document.getElementById('new-db-f');
+            const nameEl = document.getElementById('new-db-name'); const servingEl = document.getElementById('new-db-serving'); const unitEl = document.getElementById('new-db-unit'); const categoryEl = document.getElementById('new-db-category');
+            const calEl = document.getElementById('new-db-cal'); const pEl = document.getElementById('new-db-p'); const cEl = document.getElementById('new-db-c'); const fEl = document.getElementById('new-db-f');
+            
             const name = nameEl.value.trim(); const serving = parseFloat(servingEl.value); const cal = parseFloat(calEl.value);
             if (!name || isNaN(cal) || isNaN(serving) || serving <= 0) { alert("Name, Serving Size, and Calories are required."); return; }
 
-            appState.foodDatabase.push({ id: Date.now(), name: name, serving: serving, cal: cal, p: parseFloat(pEl.value) || 0, c: parseFloat(cEl.value) || 0, f: parseFloat(fEl.value) || 0 });
-            saveState(); nameEl.value=''; servingEl.value=''; calEl.value=''; pEl.value=''; cEl.value=''; fEl.value=''; renderDatabase();
+            appState.foodDatabase.push({ 
+                id: Date.now(), name: name, serving: serving, unit: unitEl.value, category: categoryEl.value, 
+                cal: cal, p: parseFloat(pEl.value) || 0, c: parseFloat(cEl.value) || 0, f: parseFloat(fEl.value) || 0 
+            });
+            saveState(); 
+            nameEl.value=''; servingEl.value=''; calEl.value=''; pEl.value=''; cEl.value=''; fEl.value=''; 
+            renderDatabase();
         });
 
+        // --- WEIGHT / HISTORY ---
         document.getElementById('btn-log-weight').addEventListener('click', () => {
             const dateInput = document.getElementById('weight-date').value; const timeInput = document.getElementById('weight-time').value; const weightInput = document.getElementById('input-weight').value; const w = parseFloat(weightInput);
             if (!dateInput || isNaN(w) || w <= 0) return;
