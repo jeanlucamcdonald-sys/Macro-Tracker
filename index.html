@@ -68,7 +68,7 @@
         <div class="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl p-6 shadow-2xl">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-lg font-black dark:text-white">Smart Scanner</h2>
-                <button onclick="document.getElementById('smart-scanner-modal').classList.add('hidden')" class="text-slate-400 font-bold p-2 text-xl hover:text-slate-600">✕</button>
+                <button onclick="stopScanner(); document.getElementById('smart-scanner-modal').classList.add('hidden')" class="text-slate-400 font-bold p-2 text-xl hover:text-slate-600">✕</button>
             </div>
 
             <div class="space-y-4">
@@ -77,18 +77,25 @@
                     <input type="password" id="api-key-input" placeholder="AIzaSy..." class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs focus:outline-none dark:text-white mt-1">
                 </div>
 
-                <div class="grid grid-cols-2 gap-3 mt-4">
-                    <label class="bg-blue-500 text-white font-bold rounded-xl py-4 text-center cursor-pointer active:scale-95 transition-transform flex flex-col items-center justify-center shadow-md">
+                <div class="grid grid-cols-2 gap-3 mt-4" id="scanner-buttons">
+                    <button onclick="startLiveScanner()" class="bg-blue-500 text-white font-bold rounded-xl py-4 text-center active:scale-95 transition-transform flex flex-col items-center justify-center shadow-md">
                         <span class="text-xs uppercase tracking-wider mb-1">Barcode</span>
                         <span class="text-2xl">📊</span>
-                        <input type="file" accept="image/*" capture="environment" class="hidden" onchange="processBarcode(this)">
-                    </label>
+                    </button>
                     
                     <label class="bg-indigo-500 text-white font-bold rounded-xl py-4 text-center cursor-pointer active:scale-95 transition-transform flex flex-col items-center justify-center shadow-md">
                         <span class="text-xs uppercase tracking-wider mb-1">Nutr. Label</span>
                         <span class="text-2xl">📸</span>
                         <input type="file" accept="image/*" capture="environment" class="hidden" onchange="processLabelOCR(this)">
                     </label>
+                </div>
+
+                <div id="scanner-video-container" class="hidden mt-4 flex flex-col items-center">
+                    <div class="w-full aspect-square bg-black rounded-xl overflow-hidden relative border-2 border-blue-500">
+                        <video id="scanner-video" class="w-full h-full object-cover"></video>
+                        <div class="absolute inset-0 border-4 border-white/20 border-dashed rounded-xl pointer-events-none"></div>
+                    </div>
+                    <button onclick="stopScanner()" class="mt-3 bg-red-500/10 text-red-500 font-bold px-4 py-2 rounded-lg text-xs tracking-wider uppercase active:scale-95 transition-transform border border-red-500/20">Cancel Scan</button>
                 </div>
 
                 <div id="scanner-status" class="text-center text-xs font-bold text-slate-500 hidden mt-4 animate-pulse">Processing Image...</div>
@@ -620,31 +627,73 @@
             });
         }
 
-        window.processBarcode = async function(input) {
-            const file = input.files[0];
-            if (!file) return;
+       // --- LIVE VIDEO BARCODE SCANNER ---
+let codeReader = null;
+
+        window.startLiveScanner = async function() {
+            document.getElementById('scanner-buttons').classList.add('hidden');
+            document.getElementById('scanner-video-container').classList.remove('hidden');
             document.getElementById('scanner-status').classList.remove('hidden');
-            document.getElementById('scanner-status').textContent = "Looking for barcode...";
+            document.getElementById('scanner-status').textContent = "Initializing camera...";
+
+            if (!codeReader) {
+                codeReader = new ZXing.BrowserMultiFormatReader();
+            }
 
             try {
-                const codeReader = new ZXing.BrowserMultiFormatReader();
-                const imgUrl = URL.createObjectURL(file);
-                const result = await codeReader.decodeFromImageUrl(imgUrl);
-                const barcode = result.text;
-                document.getElementById('scanner-status').textContent = "Fetching nutrition data...";
-                const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
-                const data = await res.json();
+                const videoInputDevices = await codeReader.listVideoInputDevices();
+                // Default to rear camera if available
+                const selectedDeviceId = videoInputDevices.length > 1 ? videoInputDevices[1].deviceId : videoInputDevices[0].deviceId;
 
-                if (data.status === 1) {
-                    const nut = data.product.nutriments;
-                    window.populateNewFoodForm(data.product.product_name || "Scanned Food", 100, "g", nut['energy-kcal_100g'] || 0, nut.proteins_100g || 0, nut.carbohydrates_100g || 0, nut.fat_100g || 0);
-                    alert("Food found and added to entry form!");
-                } else { alert("Barcode not found."); }
-            } catch (err) { alert("Could not read a barcode. Try taking a clearer photo."); } finally {
-                document.getElementById('scanner-status').classList.add('hidden');
-                document.getElementById('smart-scanner-modal').classList.add('hidden');
-                input.value = ''; 
+                document.getElementById('scanner-status').textContent = "Point camera at barcode...";
+
+                codeReader.decodeFromVideoDevice(selectedDeviceId, 'scanner-video', async (result, err) => {
+                    if (result) {
+                        // Barcode found! Stop the camera.
+                        window.stopScanner();
+                        document.getElementById('scanner-status').classList.remove('hidden');
+                        document.getElementById('scanner-status').textContent = "Fetching nutrition data...";
+                        
+                        const barcode = result.text;
+                        try {
+                            const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
+                            const data = await res.json();
+
+                            if (data.status === 1) {
+                                const nut = data.product.nutriments;
+                                window.populateNewFoodForm(
+                                    data.product.product_name || "Scanned Food", 
+                                    100, "g", 
+                                    nut['energy-kcal_100g'] || 0, 
+                                    nut.proteins_100g || 0, 
+                                    nut.carbohydrates_100g || 0, 
+                                    nut.fat_100g || 0
+                                );
+                                alert("Food found and added to entry form!");
+                            } else { 
+                                alert("Barcode not found in OpenFoodFacts database."); 
+                            }
+                        } catch (fetchErr) {
+                            alert("Network error fetching food data.");
+                        } finally {
+                            document.getElementById('scanner-status').classList.add('hidden');
+                            document.getElementById('smart-scanner-modal').classList.add('hidden');
+                        }
+                    }
+                });
+            } catch (err) {
+                window.stopScanner();
+                alert("Camera access denied or unavailable: " + err.message);
             }
+        }
+
+        window.stopScanner = function() {
+            if(codeReader) {
+                codeReader.reset();
+            }
+            document.getElementById('scanner-video-container').classList.add('hidden');
+            document.getElementById('scanner-buttons').classList.remove('hidden');
+            document.getElementById('scanner-status').classList.add('hidden');
         }
 
         window.processLabelOCR = async function(input) {
