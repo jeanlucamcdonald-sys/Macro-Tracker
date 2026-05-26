@@ -1,43 +1,36 @@
-// main.js
-
+// main.js - TOP OF FILE IMPORTS
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { auth, loginUser, logoutUser, syncStateToCloud, fetchStateFromCloud, fetchFoodByBarcode, processLabelWithGemini } from './api.js';
-import { appState, setAppState, loadLocalState, saveLocalState, getActiveDayData, saveActiveDayData, calculateMacros, getFormattedDateString } from './logic.js';
-
-// We will create these in the next step!
+import { appState, setAppState, loadLocalState, loadInitialData, saveLocalState, getActiveDayData, saveActiveDayData, calculateMacros, getFormattedDateString } from './logic.js';
 import { switchView, renderHome, renderDatabase, renderWeight, renderHistory, renderGoalsForm, populateNewFoodForm, applyEngineLockVisuals, startLiveScanner, stopScanner } from './ui.js';
 
-// ==========================================
-// 1. APP INITIALIZATION & AUTHENTICATION
-// ==========================================
-const authOverlay = document.getElementById('auth-overlay');
-const mainApp = document.getElementById('main-app');
+// ... (keep your initialization and button listeners) ...
 
-document.getElementById('btn-login').addEventListener('click', async () => {
-    try { await loginUser(); } 
-    catch (error) { alert("Login failed: " + error.message); }
-});
-
-document.getElementById('btn-logout').addEventListener('click', async () => {
-    await logoutUser();
-});
-
+// FULLY RESTORED AUTH STATE BLOCK
 onAuthStateChanged(auth, async (user) => {
     if (user) {
+        // 1. Hide Login Screen & Show App
+        const authOverlay = document.getElementById('auth-overlay');
         authOverlay.classList.add('opacity-0', 'pointer-events-none');
         setTimeout(() => authOverlay.classList.add('hidden'), 300);
-        mainApp.classList.remove('hidden');
+        document.getElementById('main-app').classList.remove('hidden');
         document.getElementById('display-user-email').textContent = user.email;
-        
-        // Fetch User Data
-        const cloudState = await fetchStateFromCloud(user.uid);
-        if (cloudState) {
-            setAppState(cloudState);
-        } else {
-            loadLocalState(); 
+
+        // 2. Load Local Data First (Instant UX)
+        await loadInitialData();
+
+        // 3. Fetch Cloud Data in Background
+        try {
+            const cloudState = await fetchStateFromCloud(user.uid);
+            if (cloudState) {
+                setAppState(cloudState);
+                saveLocalState();
+            }
+        } catch (e) {
+            console.error("Cloud fetch failed, relying on local cache", e);
         }
         
-        // Setup Date Trackers
+        // 4. Setup Date Trackers
         const todayStr = getFormattedDateString();
         document.getElementById('home-date-picker').value = todayStr;
         document.getElementById('weight-date').value = todayStr;
@@ -45,31 +38,14 @@ onAuthStateChanged(auth, async (user) => {
         document.getElementById('weight-time').value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
         document.getElementById('history-date-picker').value = todayStr;
 
-        // Archive Previous Day if Needed
-        if (!appState.lastActiveDate) {
-            appState.lastActiveDate = todayStr; 
-            saveLocalState();
-            syncStateToCloud(auth.currentUser.uid, appState);
-        } else if (appState.lastActiveDate !== todayStr) {
-            const alreadyArchived = appState.history.find(h => h.date === appState.lastActiveDate);
-            if (!alreadyArchived) {
-                appState.history.push({ date: appState.lastActiveDate, totals: { ...appState.totals }, diary: [...appState.diary] });
-            }
-            appState.totals = { cal: 0, p: 0, c: 0, f: 0 }; 
-            appState.diary = []; 
-            appState.lastActiveDate = todayStr; 
-            
-            saveLocalState();
-            syncStateToCloud(auth.currentUser.uid, appState);
-        }
-
+        // 5. Render
         renderHome();
     } else {
-        authOverlay.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
-        mainApp.classList.add('hidden');
+        // Show Login Screen
+        document.getElementById('auth-overlay').classList.remove('hidden', 'opacity-0', 'pointer-events-none');
+        document.getElementById('main-app').classList.add('hidden');
     }
 });
-
 // ==========================================
 // 2. GLOBAL WINDOW FUNCTIONS 
 // (Required because your HTML uses inline onclick="")
@@ -115,9 +91,36 @@ window.deleteWeightEntry = function(id) {
     } 
 };
 
+
 // ==========================================
 // 3. EVENT LISTENERS
 // ==========================================
+
+// --- Authentication Listeners ---
+const btnLogin = document.getElementById('btn-login');
+if (btnLogin) {
+    btnLogin.addEventListener('click', async () => {
+        try {
+            await loginUser();
+        } catch (error) {
+            console.error("Login Error:", error);
+        }
+    });
+}
+
+const btnLogout = document.getElementById('btn-logout');
+if (btnLogout) {
+    btnLogout.addEventListener('click', async () => {
+        try {
+            await logoutUser();
+            // Optional: force UI cleanup
+            window.location.reload(); 
+        } catch (error) {
+            console.error("Logout Error:", error);
+        }
+    });
+}
+
 
 // --- Home / Logging ---
 document.getElementById('home-date-picker').addEventListener('change', (e) => {

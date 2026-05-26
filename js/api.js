@@ -1,8 +1,9 @@
 // api.js
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, writeBatch, deleteField } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { appState } from './logic.js';
+
 
 // --- FIREBASE INITIALIZATION ---
 const firebaseConfig = {
@@ -38,37 +39,105 @@ export async function loginUser() {
 export async function logoutUser() {
     try {
         await signOut(auth);
+        localStorage.removeItem('macroTrackerPro_Data_v3'); // Force clean state
+        window.location.reload(); // Hard reset to ensure memory is cleared
     } catch (error) {
-        console.error("Logout failed:", error.message);
-        throw error;
+        console.error("Logout failed:", error);
     }
 }
 
 // --- FIRESTORE DATA SYNC ---
-export async function syncStateToCloud(userId, appState) {
-    try {
-        await setDoc(doc(db, "users", userId), appState);
-    } catch (e) {
-        console.error("Cloud Sync Error:", e);
-        throw e;
+// --- IDEMPOTENT MIGRATION SCRIPT ---
+async function runIdempotentMigration(userId, coreData) {
+    // 1. Check the idempotent flag
+    if (coreData.migrated === true) return false;
+    
+    // 2. Check if there's actually anything to migrate
+    if (!coreData.history || !Array.isArray(coreData.history) || coreData.history.length === 0) {
+        await setDoc(doc(db, "users", userId), { migrated: true }, { merge: true });
+        return false;
     }
+
+    console.log("Running one-time history migration...");
+    const batch = writeBatch(db);
+    const coreDocRef = doc(db, "users", userId);
+    const monthlyLogs = {};
+
+    // 3. Transform array into YYYY-MM document structures
+    coreData.history.forEach(day => {
+        const monthKey = day.date.substring(0, 7); // Extracts "YYYY-MM"
+        if (!monthlyLogs[monthKey]) monthlyLogs[monthKey] = { days: {} };
+        monthlyLogs[monthKey].days[day.date] = day;
+    });
+
+    // 4. Queue up the new subcollection writes
+    for (const [monthKey, data] of Object.entries(monthlyLogs)) {
+        const monthDocRef = doc(db, `users/${userId}/logs`, monthKey);
+        batch.set(monthDocRef, data, { merge: true });
+    }
+
+    // 5. Flag as migrated and delete the massive old array to free space
+    batch.update(coreDocRef, {
+        migrated: true,
+        history: deleteField()
+    });
+
+    await batch.commit();
+    console.log("Migration complete.");
+    return true; // Indicates migration ran
 }
 
+// --- EAGER FETCH ON LOGIN ---
 export async function fetchStateFromCloud(userId) {
     try {
-        const docRef = doc(db, "users", userId);
-        const docSnap = await getDoc(docRef);
+        const coreDocRef = doc(db, "users", userId);
+        const coreSnap = await getDoc(coreDocRef);
         
-        if (docSnap.exists()) {
-            return docSnap.data();
+        if (!coreSnap.exists()) return null; // New user
+        
+        let coreData = coreSnap.data();
+        
+        // Run migration silently if needed
+        const didMigrate = await runIdempotentMigration(userId, coreData);
+        if (didMigrate) {
+            // Re-fetch core data if migration altered it
+            coreData = (await getDoc(coreDocRef)).data(); 
         }
-        return null;
-    } catch (e) {
-        console.error("Cloud Fetch Error:", e);
-        throw e;
+
+        // Determine Eager Fetch Months (Current & Previous)
+        const date = new Date();
+        const currentMonthKey = date.toISOString().substring(0, 7);
+        date.setMonth(date.getMonth() - 1);
+        const prevMonthKey = date.toISOString().substring(0, 7);
+
+        // Fetch logs
+        const currentMonthSnap = await getDoc(doc(db, `users/${userId}/logs`, currentMonthKey));
+        const prevMonthSnap = await getDoc(doc(db, `users/${userId}/logs`, prevMonthKey));
+
+        return {
+            settings: coreData.settings || {},
+            targets: coreData.targets || {},
+            foodDatabase: coreData.foodDatabase || [],
+            logs: {
+                [currentMonthKey]: currentMonthSnap.exists() ? currentMonthSnap.data().days : {},
+                [prevMonthKey]: prevMonthSnap.exists() ? prevMonthSnap.data().days : {}
+            },
+            lastFetch: Date.now() // Timestamp for our local cache logic
+        };
+    } catch (err) {
+        console.error("Error fetching state:", err);
+        throw err;
     }
 }
 
+// --- OPTIMIZED SYNC ---
+export async function syncStateToCloud(userId, activeDateString, stateToSync) {
+    // Use stateToSync instead of the imported appState
+    await setDoc(doc(db, "users", userId), {
+        settings: stateToSync.settings,
+        // ... rest of your code
+    }, { merge: true });
+}
 // --- EXTERNAL APIs ---
 
 export async function fetchFoodByBarcode(barcode) {

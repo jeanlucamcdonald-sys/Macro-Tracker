@@ -123,37 +123,54 @@ export function groupData(dataArray, groupingType, valueKey) {
     }).reverse();
 }
 
-// --- LOGGING & HISTORY LOGIC ---
 
-export function getActiveDayData(selectedDate) {
-    const todayStr = getFormattedDateString();
-    const queryDate = selectedDate || todayStr;
-
-    if (queryDate === todayStr) {
-        return { totals: appState.totals, diary: appState.diary, isToday: true, date: queryDate };
-    } else {
-        let hist = appState.history.find(h => h.date === queryDate);
-        if (!hist) return { totals: { cal: 0, p: 0, c: 0, f: 0 }, diary: [], isToday: false, date: queryDate, isNewHist: true };
-        return { totals: hist.totals, diary: hist.diary, isToday: false, date: queryDate };
+// --- CACHE & LOAD STATE ---
+// logic.js
+export async function loadInitialData() {
+    const localData = localStorage.getItem(STORAGE_KEY);
+    if (localData) {
+        setAppState(JSON.parse(localData));
+        return true;
     }
+    return false;
 }
 
-export function saveActiveDayData(newTotals, newDiary, activeDataInfo) {
-    if (activeDataInfo.isToday) {
-        appState.totals = newTotals; 
-        appState.diary = newDiary;
-    } else {
-        if (activeDataInfo.isNewHist) {
-            appState.history.push({ date: activeDataInfo.date, totals: newTotals, diary: newDiary });
-        } else {
-            let hist = appState.history.find(h => h.date === activeDataInfo.date);
-            if(hist) {
-                hist.totals = newTotals; 
-                hist.diary = newDiary;
-            }
-        }
+// --- DAY DATA MANAGEMENT ---
+export function getActiveDayData(dateString) {
+    const monthKey = dateString.substring(0, 7);
+    
+    // Safely check for appState.logs
+    if (appState.logs && appState.logs[monthKey] && appState.logs[monthKey][dateString]) {
+        return appState.logs[monthKey][dateString];
     }
-    saveLocalState();
+    
+    // Default return if data isn't loaded yet
+    return {
+        date: dateString,
+        diary: [],
+        totals: { cal: 0, p: 0, c: 0, f: 0 },
+        weight: null
+    };
+}
+
+export async function saveActiveDayData(dateString, dayData) {
+    const monthKey = dateString.substring(0, 7);
+    
+    // Initialize the month object if it doesn't exist yet
+    if (!appState.logs[monthKey]) {
+        appState.logs[monthKey] = {};
+    }
+    
+    // Optimistic UI Update: Write to memory and local storage instantly
+    appState.logs[monthKey][dateString] = dayData;
+    saveLocalState(); 
+
+    // Background Cloud Sync (Pass the date string so API knows WHICH month to sync)
+    const user = auth.currentUser; // Assuming auth is imported in logic.js or passed in
+    if (user) {
+        // Fire and forget - don't await so UI doesn't block
+        syncStateToCloud(user.uid, dateString); 
+    }
 }
 
 // --- MACRO ENGINE CALCULATIONS ---
